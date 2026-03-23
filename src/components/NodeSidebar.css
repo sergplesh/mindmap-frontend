@@ -1,0 +1,592 @@
+.node-sidebar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 350px;
+  height: 100%;
+  background: white;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+}
+
+.sidebar-header {
+  padding: 20px;
+  background: #2c3e50;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.sidebar-content {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.field {
+  margin-bottom: 20px;
+}
+
+.field label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.field input,
+.field textarea,
+.field select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid #ecf0f1;
+  display: flex;
+  gap: 10px;
+}
+
+.sidebar-footer button {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.sidebar-footer button:first-child {
+  background: #3498db;
+  color: white;
+}
+
+.sidebar-footer button.delete {
+  background: #e74c3c;
+  color: white;
+}
+
+.edit-fields-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+  background: #f8f9fa;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 16px;
+}
+
+.edit-fields-btn:hover {
+  background: #eef2f7;
+}
+
+.questions-section {
+  margin-top: 20px;
+  border-top: 1px solid #ecf0f1;
+  padding-top: 16px;
+}
+
+.node-fields-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2200;
+}
+
+.node-fields-modal {
+  width: 90%;
+  max-width: 620px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+.node-fields-header {
+  padding: 16px 20px;
+  background: #2c3e50;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.node-fields-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #ecf0f1;
+  background: #f8f9fa;
+}
+
+.node-fields-tab {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #34495e;
+}
+
+.node-fields-tab.active {
+  background: #ffffff;
+  border-color: #d0d7de;
+  color: #2c3e50;
+}
+
+.node-fields-content {
+  padding: 16px 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.node-fields-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.node-fields-footer {
+  padding: 12px 20px;
+  border-top: 1px solid #ecf0f1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.questions-section .section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.add-question-btn {
+  padding: 6px 10px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.question-form {
+  background: #f8f9fa;
+  border: 1px dashed #d0d7de;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.question-form .error-message {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+.option-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.option-row input[type="text"] {
+  flex: 1;
+}
+
+.option-remove {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.add-option-btn {
+  margin-top: 6px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.save-btn {
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.save-btn:disabled {
+  background: #95a5a6;
+  cursor: not-allowed;
+}
+
+.question-card {
+  background: #f8f9fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.question-text {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.question-option {
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #2c3e50;
+}
+
+.question-option.correct {
+  color: #27ae60;
+  font-weight: 600;
+}
+
+.question-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.delete-question {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.empty-message {
+  color: #7f8c8d;
+  font-style: italic;
+}
+
+.test-section {
+  margin-top: 20px;
+  border-top: 1px solid #ecf0f1;
+  padding-top: 16px;
+}
+
+.test-question {
+  margin-bottom: 12px;
+}
+
+.test-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.test-option {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.test-actions {
+  margin-top: 10px;
+}
+
+.verify-message {
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.verify-message.success {
+  background: #e8f8f0;
+  color: #1e8449;
+  border: 1px solid #b8e6c9;
+}
+
+.verify-message.error {
+  background: #fdecea;
+  color: #b03a2e;
+  border: 1px solid #f5b7b1;
+}
+
+.detach-btn {
+  background: #f39c12;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-left: 8px;
+}
+
+.detach-btn:hover {
+  background: #e67e22;
+}
+
+.manage-questions-btn {
+  padding: 6px 12px;
+  background: #3498db;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.manage-questions-btn .material-icons {
+  font-size: 16px;
+}
+
+.manage-questions-btn:hover {
+  background: #2980b9;
+}
+
+.questions-summary {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.questions-summary p {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.view-questions-link {
+  background: none;
+  border: none;
+  color: #3498db;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.view-questions-link .material-icons {
+  font-size: 14px;
+}
+
+.view-questions-link:hover {
+  background: #e8f0fe;
+}
+
+.empty-questions {
+  text-align: center;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 1px dashed #d0d7de;
+  border-radius: 8px;
+}
+
+.empty-questions .material-icons {
+  font-size: 32px;
+  color: #bdc3c7;
+  margin-bottom: 8px;
+}
+
+.empty-questions p {
+  margin: 0 0 12px 0;
+  color: #7f8c8d;
+  font-size: 13px;
+}
+
+.create-first-question-btn {
+  padding: 6px 12px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.create-first-question-btn .material-icons {
+  font-size: 14px;
+  color: white;
+}
+
+.create-first-question-btn:hover {
+  background: #2ecc71;
+}
+
+/* Кастомные поля */
+.custom-fields-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.custom-fields-section h4 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.custom-fields-display {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #ecf0f1;
+}
+
+.custom-fields-display h4 {
+  margin: 0 0 16px 0;
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.field .required {
+  color: #e74c3c;
+  margin-left: 4px;
+}
+
+.field .field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: auto;
+  margin: 0;
+}
+
+.field-value {
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  color: #2c3e50;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+/* Для полей типа URL */
+.field-value a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.field-value a:hover {
+  text-decoration: underline;
+}
+
+/* Чекбокс поле */
+.checkbox-field {
+  margin: 16px 0;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.checkbox-label input {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.checkbox-text {
+  font-weight: 500;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.field-hint {
+  display: block;
+  font-size: 11px;
+  color: #7f8c8d;
+  margin-top: 4px;
+}

@@ -1,0 +1,387 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+.map-form-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #edf2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafbfc;
+  border-radius: 16px 16px 0 0;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #1e293b;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #718096;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #fee;
+  color: #e53e3e;
+}
+
+.modal-content {
+  padding: 24px;
+}
+
+.icon-selector {
+  margin-bottom: 24px;
+}
+
+.icon-selector label {
+  display: block;
+  margin-bottom: 12px;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.icon-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #4a5568;
+}
+
+.icon-btn .material-icons {
+  font-size: 24px;
+}
+
+.icon-btn:hover {
+  border-color: #3182ce;
+  background: #ebf5ff;
+  color: #3182ce;
+  transform: scale(1.05);
+}
+
+.icon-btn.active {
+  border-color: #3182ce;
+  background: #3182ce;
+  color: white;
+}
+
+.selected-icon {
+  padding: 8px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.icon-preview {
+  background: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-preview .material-icons {
+  font-size: 20px;
+  color: #3182ce;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.required {
+  color: #e53e3e;
+  margin-left: 4px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.2s;
+  font-family: inherit;
+  background: #fafbfc;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
+  background: white;
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #a0aec0;
+}
+
+.textarea-counter {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #718096;
+  text-align: right;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+  max-height: 400px;
+  line-height: 1.6;
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #edf2f7;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  background: #fafbfc;
+  border-radius: 0 0 16px 16px;
+}
+
+.cancel-btn,
+.save-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.cancel-btn {
+  background: white;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.cancel-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e0;
+}
+
+.save-btn {
+  background: #3182ce;
+  color: white;
+  min-width: 120px;
+}
+
+.save-btn:hover:not(:disabled) {
+  background: #2c5282;
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
+
+.save-btn:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .modal-header h2 {
+    font-size: 18px;
+  }
+
+  .icon-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .modal-footer {
+    padding: 16px 20px;
+  }
+
+  .cancel-btn,
+  .save-btn {
+    padding: 8px 20px;
+  }
+}
+.icon-selector label {
+  display: block;
+  margin-bottom: 12px;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.icon-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.icon-btn {
+  width: 56px;
+  height: 56px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #4a5568;
+  position: relative;
+}
+
+.icon-btn .material-icons {
+  font-size: 28px;
+}
+
+.icon-btn:hover {
+  border-color: #3182ce;
+  background: #ebf5ff;
+  color: #3182ce;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.2);
+}
+
+.icon-btn.active {
+  border-color: #3182ce;
+  background: #3182ce;
+  color: white;
+  box-shadow: 0 4px 12px rgba(49, 130, 206, 0.3);
+}
+
+.icon-btn.active:hover {
+  background: #2c5282;
+  border-color: #2c5282;
+}
+
+.selected-icon {
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #4a5568;
+  border: 1px solid #e2e8f0;
+}
+
+.icon-preview {
+  background: white;
+  padding: 6px 10px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-preview .material-icons {
+  font-size: 24px;
+  color: #3182ce;
+}
+
+.selected-label {
+  font-weight: 500;
+  color: #1e293b;
+  flex: 1;
+}
+
+@media (max-width: 768px) {
+  .icon-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+  }
+
+  .icon-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .icon-btn .material-icons {
+    font-size: 24px;
+  }
+}

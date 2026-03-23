@@ -1,0 +1,297 @@
+.map-card {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border: 1px solid #edf2f7;
+  position: relative;
+}
+
+.map-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  border-color: #d0e0f0;
+}
+
+.map-card.selected {
+  border-color: #3182ce;
+  box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.2);
+}
+
+.map-card-header {
+  padding: 20px 20px 8px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.map-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+  line-height: 1.5;
+  flex: 1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  letter-spacing: 0.2px;
+}
+
+.map-card-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.map-card-edit,
+.map-card-delete {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  color: #718096;
+}
+
+.map-card-edit .material-icons,
+.map-card-delete .material-icons {
+  font-size: 18px;
+}
+
+.map-card-edit:hover {
+  background: #e6f0fa;
+  color: #3182ce;
+}
+
+.map-card-delete:hover {
+  background: #fee;
+  color: #e53e3e;
+}
+
+.map-card-content {
+  padding: 0 20px 16px 20px;
+  flex: 1;
+}
+
+.map-card-description-container {
+  position: relative;
+}
+
+.map-card-description {
+  margin: 0;
+  font-size: 13px;
+  color: #4a5568;
+  line-height: 1.6;
+  display: inline;
+}
+
+.show-more-btn {
+  background: none;
+  border: none;
+  color: #3182ce;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: 4px;
+  display: inline;
+  transition: color 0.2s;
+}
+
+.show-more-btn:hover {
+  color: #2c5282;
+  text-decoration: underline;
+}
+
+.map-card-footer {
+  padding: 12px 20px;
+  background: #fafbfc;
+  border-top: 1px solid #edf2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.map-card-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e6f0fa;
+  border-radius: 6px;
+  color: #3182ce;
+}
+
+.map-card-icon.no-icon {
+  background: transparent;
+  color: #cbd5e0;
+}
+
+.map-card-icon .material-icons {
+  font-size: 16px;
+}
+
+.map-card-date {
+  font-size: 12px;
+  color: #718096;
+}
+
+.footer-right {
+  display: flex;
+  gap: 12px;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #4a5568;
+}
+
+.stat .material-icons {
+  font-size: 14px;
+  color: #718096;
+}
+
+/* Модальное окно для описания */
+.description-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.description-modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.description-modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #edf2f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafbfc;
+}
+
+.description-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.description-modal-header .close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: #718096;
+  transition: all 0.2s;
+}
+
+.description-modal-header .close-btn:hover {
+  background: #fee;
+  color: #e53e3e;
+}
+
+.description-modal-content {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: calc(80vh - 70px);
+}
+
+.description-modal-content p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.7;
+  color: #2d3748;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.map-card {
+  animation: cardAppear 0.3s ease;
+}
+
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .map-card-header {
+    padding: 16px 16px 4px 16px;
+  }
+
+  .map-card-content {
+    padding: 0 16px 12px 16px;
+  }
+
+  .map-card-footer {
+    padding: 10px 16px;
+  }
+}

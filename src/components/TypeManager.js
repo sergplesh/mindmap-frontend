@@ -1,0 +1,899 @@
+import React, { useState, useEffect } from 'react';
+import { customTypesService } from '../services/customTypesService';
+import './TypeManager.css';
+
+function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
+  const [systemTypes, setSystemTypes] = useState([]);
+  const [customTypes, setCustomTypes] = useState([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingType, setEditingType] = useState(null);
+  const [newType, setNewType] = useState({
+    name: '',
+    color: category === 'node' ? '#3b82f6' : '#666666',
+    shape: 'rect',
+    style: 'solid',
+    label: '',
+    icon: '',
+    size: 'medium',
+    customFields: []
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showFieldModal, setShowFieldModal] = useState(false);
+  const [editingField, setEditingField] = useState(null);
+  const [fieldForm, setFieldForm] = useState({
+    name: '',
+    type: 'text',
+    required: false,
+    defaultValue: '',
+    placeholder: '',
+    validation: ''
+  });
+
+  const isNodeCategory = category === 'node';
+  
+  // Шаблоны типов узлов
+  const nodeTemplates = [
+    {
+      id: 'concept',
+      name: 'Понятие',
+      color: '#3b82f6',
+      shape: 'rect',
+      icon: 'psychology',
+      description: 'Основное понятие темы',
+      customFields: [
+        { name: 'Определение', type: 'text', required: true },
+        { name: 'Примеры', type: 'text', required: false }
+      ]
+    },
+    {
+      id: 'definition',
+      name: 'Определение',
+      color: '#10b981',
+      shape: 'rounded',
+      icon: 'description',
+      description: 'Четкое определение термина',
+      customFields: [
+        { name: 'Формулировка', type: 'text', required: true },
+        { name: 'Ключевые слова', type: 'text', required: false }
+      ]
+    },
+    {
+      id: 'formula',
+      name: 'Формула',
+      color: '#ef4444',
+      shape: 'rect',
+      icon: 'functions',
+      description: 'Математическая формула',
+      customFields: [
+        { name: 'Формула (LaTeX)', type: 'text', required: true },
+        { name: 'Описание', type: 'text', required: true }
+      ]
+    },
+    {
+      id: 'algorithm',
+      name: 'Алгоритм',
+      color: '#f59e0b',
+      shape: 'diamond',
+      icon: 'route',
+      description: 'Последовательность действий',
+      customFields: [
+        { name: 'Входные данные', type: 'text', required: true },
+        { name: 'Выходные данные', type: 'text', required: true },
+        { name: 'Сложность', type: 'text', required: false }
+      ]
+    },
+    {
+      id: 'example',
+      name: 'Пример',
+      color: '#8b5cf6',
+      shape: 'rounded',
+      icon: 'code',
+      description: 'Практический пример',
+      customFields: [
+        { name: 'Код/Пример', type: 'textarea', required: true },
+        { name: 'Пояснение', type: 'text', required: false }
+      ]
+    },
+    {
+      id: 'resource',
+      name: 'Ресурс',
+      color: '#06b6d4',
+      shape: 'oval',
+      icon: 'link',
+      description: 'Внешний ресурс',
+      customFields: [
+        { name: 'URL', type: 'url', required: true },
+        { name: 'Тип ресурса', type: 'select', required: false, options: ['Статья', 'Видео', 'Книга', 'Курс'] }
+      ]
+    }
+  ];
+
+  // Шаблоны типов связей
+  const edgeTemplates = [
+    {
+      id: 'is_a',
+      name: 'является',
+      color: '#666666',
+      style: 'solid',
+      label: 'является',
+      description: 'Иерархическая связь'
+    },
+    {
+      id: 'depends_on',
+      name: 'зависит от',
+      color: '#e74c3c',
+      style: 'solid',
+      label: 'зависит от',
+      description: 'Зависимость между понятиями'
+    },
+    {
+      id: 'example_of',
+      name: 'пример',
+      color: '#2ecc71',
+      style: 'dashed',
+      label: 'пример',
+      description: 'Пример для понятия'
+    },
+    {
+      id: 'related_to',
+      name: 'связано с',
+      color: '#3498db',
+      style: 'dotted',
+      label: 'связано с',
+      description: 'Общая связь'
+    },
+    {
+      id: 'contradicts',
+      name: 'противоречит',
+      color: '#e74c3c',
+      style: 'dashed',
+      label: 'противоречит',
+      description: 'Противоречие'
+    }
+  ];
+
+  const templates = isNodeCategory ? nodeTemplates : edgeTemplates;
+
+  useEffect(() => {
+    loadTypes();
+  }, [mapId, category]);
+
+  const loadTypes = async () => {
+    try {
+      const data = await customTypesService.getTypes(mapId, category);
+      setSystemTypes(data.system);
+      setCustomTypes(data.custom);
+    } catch (error) {
+      console.error('Ошибка загрузки типов:', error);
+      setError('Не удалось загрузить типы');
+    }
+  };
+
+  const handleCreateType = async () => {
+    if (!newType.name.trim()) {
+      setError('Введите название типа');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const typeData = {
+        ...newType,
+        customFields: newType.customFields.map(field => ({
+          ...field,
+          options: field.options ? field.options.split(',').map(o => o.trim()) : undefined
+        }))
+      };
+
+      if (editingType) {
+        await customTypesService.updateType(mapId, category, editingType.id, typeData);
+      } else {
+        await customTypesService.createType(mapId, category, typeData);
+      }
+      
+      setShowCreateForm(false);
+      setEditingType(null);
+      resetForm();
+      
+      loadTypes();
+      if (onTypesChange) onTypesChange();
+    } catch (error) {
+      setError(error.response?.data?.message || 'Ошибка создания типа');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyTemplate = (template) => {
+    setNewType({
+      name: template.name,
+      color: template.color,
+      shape: template.shape || 'rect',
+      style: template.style || 'solid',
+      label: template.label || '',
+      icon: template.icon || '',
+      size: 'medium',
+      customFields: template.customFields || []
+    });
+  };
+
+  const handleDeleteType = async (typeId) => {
+    if (!window.confirm('Удалить этот тип? Он исчезнет из всех узлов, где используется.')) return;
+
+    try {
+      await customTypesService.deleteType(mapId, category, typeId);
+      loadTypes();
+      if (onTypesChange) onTypesChange();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Ошибка удаления типа');
+    }
+  };
+
+  const startEditing = (type) => {
+    setEditingType(type);
+    setNewType({
+      name: type.name,
+      color: type.color || (isNodeCategory ? '#3b82f6' : '#666666'),
+      shape: type.shape || 'rect',
+      style: type.style || 'solid',
+      label: type.label || '',
+      icon: type.icon || '',
+      size: type.size || 'medium',
+      customFields: type.customFields || []
+    });
+    setShowCreateForm(true);
+  };
+
+  const resetForm = () => {
+    setNewType({
+      name: '',
+      color: isNodeCategory ? '#3b82f6' : '#666666',
+      shape: 'rect',
+      style: 'solid',
+      label: '',
+      icon: '',
+      size: 'medium',
+      customFields: []
+    });
+    setError('');
+  };
+
+  const cancelForm = () => {
+    setShowCreateForm(false);
+    setEditingType(null);
+    resetForm();
+  };
+
+  const addCustomField = () => {
+    if (!fieldForm.name.trim()) {
+      alert('Введите название поля');
+      return;
+    }
+    
+    const newField = {
+      id: Date.now(),
+      name: fieldForm.name,
+      type: fieldForm.type,
+      required: fieldForm.required,
+      defaultValue: fieldForm.defaultValue,
+      placeholder: fieldForm.placeholder,
+      validation: fieldForm.validation,
+      options: fieldForm.type === 'select' ? fieldForm.options?.split(',') : undefined
+    };
+    
+    setNewType(prev => ({
+      ...prev,
+      customFields: [...prev.customFields, newField]
+    }));
+    
+    setShowFieldModal(false);
+    resetFieldForm();
+  };
+
+  const editCustomField = (field) => {
+    setEditingField(field);
+    setFieldForm({
+      name: field.name,
+      type: field.type,
+      required: field.required,
+      defaultValue: field.defaultValue || '',
+      placeholder: field.placeholder || '',
+      validation: field.validation || '',
+      options: field.options ? field.options.join(', ') : ''
+    });
+    setShowFieldModal(true);
+  };
+
+  const removeCustomField = (fieldId) => {
+    setNewType(prev => ({
+      ...prev,
+      customFields: prev.customFields.filter(f => f.id !== fieldId)
+    }));
+  };
+
+  const resetFieldForm = () => {
+    setFieldForm({
+      name: '',
+      type: 'text',
+      required: false,
+      defaultValue: '',
+      placeholder: '',
+      validation: ''
+    });
+    setEditingField(null);
+  };
+
+  const getShapeStyle = (shape, size = 'medium') => {
+    const sizes = {
+      small: { width: '100px', height: '60px', fontSize: '12px' },
+      medium: { width: '140px', height: '80px', fontSize: '14px' },
+      large: { width: '180px', height: '100px', fontSize: '16px' }
+    };
+    
+    const baseSize = sizes[size] || sizes.medium;
+    
+    switch(shape) {
+      case 'oval':
+        return { 
+          borderRadius: '50%', 
+          width: baseSize.width, 
+          height: baseSize.height,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        };
+      case 'diamond':
+        return {
+          clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+          width: baseSize.width,
+          height: baseSize.width,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        };
+      case 'rounded':
+        return { 
+          borderRadius: '12px', 
+          width: baseSize.width, 
+          height: baseSize.height,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        };
+      default:
+        return { 
+          borderRadius: '4px', 
+          width: baseSize.width, 
+          height: baseSize.height,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        };
+    }
+  };
+
+  const renderForm = () => (
+    <div className="create-type-form">
+      <h5>{editingType ? 'Редактировать тип' : 'Создать новый тип'}</h5>
+      
+      {error && <div className="error-message">{error}</div>}
+      
+      {/* Шаблоны */}
+      {!editingType && templates.length > 0 && (
+        <div className="templates-section">
+          <label>Быстрый старт:</label>
+          <div className="templates-grid">
+            {templates.map(template => (
+              <button
+                key={template.id}
+                className="template-card"
+                onClick={() => applyTemplate(template)}
+              >
+                <span className="material-icons">
+                  {isNodeCategory ? 'category' : 'timeline'}
+                </span>
+                <div>
+                  <strong>{template.name}</strong>
+                  <small>{template.description}</small>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      
+      <div className="form-group">
+        <label>Название типа *</label>
+        <input
+          type="text"
+          value={newType.name}
+          onChange={(e) => setNewType({...newType, name: e.target.value})}
+          placeholder={`Например: ${isNodeCategory ? 'Важное понятие' : 'связано с'}`}
+          autoFocus
+        />
+      </div>
+
+      {isNodeCategory ? (
+        <>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Цвет</label>
+              <div className="color-input-group">
+                <input
+                  type="color"
+                  value={newType.color}
+                  onChange={(e) => setNewType({...newType, color: e.target.value})}
+                />
+                <input
+                  type="text"
+                  value={newType.color}
+                  onChange={(e) => setNewType({...newType, color: e.target.value})}
+                  placeholder="#3b82f6"
+                />
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label>Форма</label>
+              <select
+                value={newType.shape}
+                onChange={(e) => setNewType({...newType, shape: e.target.value})}
+              >
+                <option value="rect">Прямоугольник</option>
+                <option value="rounded">Скругленный</option>
+                <option value="oval">Овал</option>
+                <option value="diamond">Ромб</option>
+              </select>
+            </div>
+            
+            <div className="form-group">
+              <label>Размер</label>
+              <select
+                value={newType.size}
+                onChange={(e) => setNewType({...newType, size: e.target.value})}
+              >
+                <option value="small">Маленький</option>
+                <option value="medium">Средний</option>
+                <option value="large">Большой</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Иконка (material icon name)</label>
+            <div className="icon-input-group">
+              <input
+                type="text"
+                value={newType.icon}
+                onChange={(e) => setNewType({...newType, icon: e.target.value})}
+                placeholder="psychology, code, functions, etc."
+              />
+              {newType.icon && (
+                <span className="icon-preview">
+                  <span className="material-icons">{newType.icon}</span>
+                </span>
+              )}
+            </div>
+            <small className="field-hint">
+              Доступные иконки: psychology, description, functions, route, code, link, school, science, etc.
+            </small>
+          </div>
+
+          {/* Кастомные поля */}
+          <div className="custom-fields-section">
+            <div className="section-header">
+              <label>Кастомные поля</label>
+              <button
+                type="button"
+                className="add-field-btn"
+                onClick={() => setShowFieldModal(true)}
+              >
+                <span className="material-icons">add</span>
+                Добавить поле
+              </button>
+            </div>
+            
+            {newType.customFields.length === 0 ? (
+              <div className="empty-fields">
+                <span className="material-icons">add_box</span>
+                <p>Добавьте кастомные поля для этого типа узлов</p>
+                <small>Например: "Определение", "Примеры", "Сложность"</small>
+              </div>
+            ) : (
+              <div className="fields-list">
+                {newType.customFields.map(field => (
+                  <div key={field.id} className="field-item">
+                    <div className="field-info">
+                      <span className="field-name">{field.name}</span>
+                      <span className="field-type">{field.type}</span>
+                      {field.required && <span className="required-badge">Обязательное</span>}
+                    </div>
+                    <div className="field-actions">
+                      <button
+                        className="edit-field"
+                        onClick={() => editCustomField(field)}
+                        title="Редактировать"
+                      >
+                        <span className="material-icons">edit</span>
+                      </button>
+                      <button
+                        className="remove-field"
+                        onClick={() => removeCustomField(field.id)}
+                        title="Удалить"
+                      >
+                        <span className="material-icons">delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Цвет линии</label>
+              <div className="color-input-group">
+                <input
+                  type="color"
+                  value={newType.color}
+                  onChange={(e) => setNewType({...newType, color: e.target.value})}
+                />
+                <input
+                  type="text"
+                  value={newType.color}
+                  onChange={(e) => setNewType({...newType, color: e.target.value})}
+                  placeholder="#666666"
+                />
+              </div>
+            </div>
+            
+            <div className="form-group">
+              <label>Стиль линии</label>
+              <select
+                value={newType.style}
+                onChange={(e) => setNewType({...newType, style: e.target.value})}
+              >
+                <option value="solid">Сплошная ————</option>
+                <option value="dashed">Пунктирная - - - -</option>
+                <option value="dotted">Точечная · · · ·</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="form-group">
+            <label>Подпись на связи</label>
+            <input
+              type="text"
+              value={newType.label}
+              onChange={(e) => setNewType({...newType, label: e.target.value})}
+              placeholder="например: связано с"
+            />
+            <small className="field-hint">Текст, который будет отображаться на связи</small>
+          </div>
+        </>
+      )}
+
+      <div className="preview-section">
+        <h6>Предпросмотр:</h6>
+        {isNodeCategory ? (
+          <div 
+            className="node-preview"
+            style={{ 
+              ...getShapeStyle(newType.shape, newType.size),
+              backgroundColor: newType.color,
+              color: getContrastColor(newType.color),
+              gap: '8px',
+              margin: '10px auto'
+            }}
+          >
+            {newType.icon && <span className="material-icons">{newType.icon}</span>}
+            <span>{newType.name || 'Название типа'}</span>
+          </div>
+        ) : (
+          <div className="edge-preview">
+            <div 
+              style={{
+                borderBottom: `3px ${newType.style} ${newType.color}`,
+                width: '150px',
+                marginBottom: '8px'
+              }}
+            />
+            {newType.label && (
+              <span style={{ color: newType.color, fontSize: '12px' }}>
+                {newType.label}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="form-actions">
+        <button 
+          className="save-btn"
+          onClick={handleCreateType}
+          disabled={loading}
+        >
+          {loading ? 'Сохранение...' : (editingType ? 'Сохранить' : 'Создать')}
+        </button>
+        <button 
+          className="cancel-btn"
+          onClick={cancelForm}
+        >
+          Отмена
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderFieldModal = () => (
+    <div className="field-modal-overlay" onClick={() => setShowFieldModal(false)}>
+      <div className="field-modal" onClick={e => e.stopPropagation()}>
+        <div className="field-modal-header">
+          <h4>{editingField ? 'Редактировать поле' : 'Добавить поле'}</h4>
+          <button className="close-btn" onClick={() => setShowFieldModal(false)}>
+            <span className="material-icons">close</span>
+          </button>
+        </div>
+        
+        <div className="field-modal-content">
+          <div className="form-group">
+            <label>Название поля *</label>
+            <input
+              type="text"
+              value={fieldForm.name}
+              onChange={(e) => setFieldForm({...fieldForm, name: e.target.value})}
+              placeholder="Например: Определение"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Тип поля</label>
+            <select
+              value={fieldForm.type}
+              onChange={(e) => setFieldForm({...fieldForm, type: e.target.value})}
+            >
+              <option value="text">Текст (одна строка)</option>
+              <option value="textarea">Текст (много строк)</option>
+              <option value="number">Число</option>
+              <option value="date">Дата</option>
+              <option value="url">Ссылка</option>
+              <option value="select">Выпадающий список</option>
+              <option value="checkbox">Чекбокс</option>
+            </select>
+          </div>
+          
+          {fieldForm.type === 'select' && (
+            <div className="form-group">
+              <label>Варианты (через запятую)</label>
+              <input
+                type="text"
+                value={fieldForm.options}
+                onChange={(e) => setFieldForm({...fieldForm, options: e.target.value})}
+                placeholder="Вариант 1, Вариант 2, Вариант 3"
+              />
+            </div>
+          )}
+          
+          <div className="form-group checkbox">
+            <label>
+              <input
+                type="checkbox"
+                checked={fieldForm.required}
+                onChange={(e) => setFieldForm({...fieldForm, required: e.target.checked})}
+              />
+              Обязательное поле
+            </label>
+          </div>
+          
+          <div className="form-group">
+            <label>Плейсхолдер</label>
+            <input
+              type="text"
+              value={fieldForm.placeholder}
+              onChange={(e) => setFieldForm({...fieldForm, placeholder: e.target.value})}
+              placeholder="Подсказка для ввода"
+            />
+          </div>
+          
+          <div className="form-group">
+            <label>Значение по умолчанию</label>
+            <input
+              type="text"
+              value={fieldForm.defaultValue}
+              onChange={(e) => setFieldForm({...fieldForm, defaultValue: e.target.value})}
+              placeholder="Значение по умолчанию"
+            />
+          </div>
+        </div>
+        
+        <div className="field-modal-footer">
+          <button className="cancel-btn" onClick={() => setShowFieldModal(false)}>
+            Отмена
+          </button>
+          <button className="save-btn" onClick={addCustomField}>
+            {editingField ? 'Сохранить' : 'Добавить'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="type-manager">
+        <div className="type-manager-header">
+          <h3>
+            {isNodeCategory ? (
+              <>
+                <span className="material-icons">category</span>
+                Типы узлов
+              </>
+            ) : (
+              <>
+                <span className="material-icons">timeline</span>
+                Типы связей
+              </>
+            )}
+          </h3>
+          <button className="close-btn" onClick={onClose}>×</button>
+        </div>
+
+        <div className="type-manager-content">
+          {/* Системные типы */}
+          <div className="types-section">
+            <h4>📌 Системные типы</h4>
+            <div className="types-grid">
+              {systemTypes.map(type => (
+                <div key={type.id} className="type-card system">
+                  {isNodeCategory ? (
+                    <>
+                      <div 
+                        className="color-preview"
+                        style={{ backgroundColor: type.color, ...getShapeStyle(type.shape) }}
+                      />
+                      <div className="type-info">
+                        <span className="type-name">{type.name}</span>
+                        {type.icon && (
+                          <span className="material-icons type-icon">{type.icon}</span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div 
+                        className="line-preview"
+                        style={{
+                          borderBottom: `3px ${type.style} ${type.color || '#666'}`,
+                          width: '50px'
+                        }}
+                      />
+                      <div className="type-info">
+                        <span className="type-name">{type.name}</span>
+                        {type.label && <span className="type-label">{type.label}</span>}
+                      </div>
+                    </>
+                  )}
+                  <span className="system-badge">системный</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Пользовательские типы */}
+          {isOwner && (
+            <div className="types-section">
+              <div className="section-header">
+                <h4>✨ Мои типы</h4>
+                <button 
+                  className="add-type-btn"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  <span className="material-icons">add</span>
+                  Создать тип
+                </button>
+              </div>
+
+              {showCreateForm && renderForm()}
+
+              <div className="types-grid">
+                {customTypes.length === 0 && !showCreateForm ? (
+                  <div className="empty-types">
+                    <span className="material-icons">category</span>
+                    <p>У вас пока нет своих типов</p>
+                    <button 
+                      className="create-first-btn"
+                      onClick={() => setShowCreateForm(true)}
+                    >
+                      Создать первый тип
+                    </button>
+                  </div>
+                ) : (
+                  customTypes.map(type => (
+                    <div key={type.id} className="type-card custom">
+                      {isNodeCategory ? (
+                        <>
+                          <div 
+                            className="color-preview"
+                            style={{ backgroundColor: type.color, ...getShapeStyle(type.shape) }}
+                          />
+                          <div className="type-info">
+                            <span className="type-name">{type.name}</span>
+                            {type.icon && (
+                              <span className="material-icons type-icon">{type.icon}</span>
+                            )}
+                            {type.customFields && type.customFields.length > 0 && (
+                              <span className="fields-count" title={`${type.customFields.length} кастомных полей`}>
+                                {type.customFields.length} поля
+                              </span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div 
+                            className="line-preview"
+                            style={{
+                              borderBottom: `3px ${type.style} ${type.color}`,
+                              width: '50px'
+                            }}
+                          />
+                          <div className="type-info">
+                            <span className="type-name">{type.name}</span>
+                            {type.label && <span className="type-label">{type.label}</span>}
+                          </div>
+                        </>
+                      )}
+                      <div className="type-actions">
+                        <button 
+                          className="edit-type"
+                          onClick={() => startEditing(type)}
+                          title="Редактировать"
+                        >
+                          <span className="material-icons">edit</span>
+                        </button>
+                        <button 
+                          className="delete-type"
+                          onClick={() => handleDeleteType(type.id)}
+                          title="Удалить"
+                        >
+                          <span className="material-icons">delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {!isOwner && (
+            <div className="info-message">
+              <span className="material-icons">info</span>
+              <span>Только владелец карты может создавать свои типы</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showFieldModal && renderFieldModal()}
+    </>
+  );
+}
+
+function getContrastColor(hexColor) {
+  if (!hexColor) return '#333333';
+  const color = hexColor.replace('#', '');
+  const r = parseInt(color.substr(0, 2), 16);
+  const g = parseInt(color.substr(2, 2), 16);
+  const b = parseInt(color.substr(4, 2), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 128 ? '#1a1a1a' : '#ffffff';
+}
+
+export default TypeManager;
