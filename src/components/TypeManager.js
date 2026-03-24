@@ -198,8 +198,8 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
       setEditingType(null);
       resetForm();
       
-      loadTypes();
-      if (onTypesChange) onTypesChange();
+      await loadTypes();
+      if (onTypesChange) await onTypesChange(category);
     } catch (error) {
       setError(error.response?.data?.message || 'Ошибка создания типа');
     } finally {
@@ -225,8 +225,8 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
 
     try {
       await customTypesService.deleteType(mapId, category, typeId);
-      loadTypes();
-      if (onTypesChange) onTypesChange();
+      await loadTypes();
+      if (onTypesChange) await onTypesChange(category);
     } catch (error) {
       alert(error.response?.data?.message || 'Ошибка удаления типа');
     }
@@ -747,7 +747,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
         <div className="type-manager-content">
           {/* Системные типы */}
           <div className="types-section">
-            <h4>📌 Системные типы</h4>
+            <h4>Системные типы</h4>
             <div className="types-grid">
               {systemTypes.map(type => (
                 <div key={type.id} className="type-card system">

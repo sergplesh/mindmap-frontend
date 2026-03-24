@@ -15,6 +15,7 @@ function NodeSidebar({
   customNodeTypes = [],
   onTypesUpdate,
   onRefreshMap,
+  onEnsureNodeSaved,
   startEditing = false,
   onDetach,
   isDraggable,
@@ -227,15 +228,31 @@ function NodeSidebar({
       setError('Введите название узла');
       return;
     }
-    if (!isValidNodeId(node?.id)) {
-      setError('Узел еще не сохранен. Подождите пару секунд и попробуйте снова.');
-      return;
-    }
 
     setSaving(true);
     setError('');
 
     try {
+      let persistedNode = node;
+
+      if (!isValidNodeId(node?.id)) {
+        if (!onEnsureNodeSaved) {
+          setError('Не удалось сохранить новый узел. Попробуйте еще раз.');
+          return;
+        }
+
+        persistedNode = await onEnsureNodeSaved(node);
+        if (!persistedNode?.id || !isValidNodeId(persistedNode.id)) {
+          setError('Не удалось сохранить новый узел. Попробуйте еще раз.');
+          return;
+        }
+
+        setNode((prev) => ({
+          ...prev,
+          ...persistedNode
+        }));
+      }
+
       const payload = {
         title: title.trim(),
         description: description?.trim() || '',
@@ -256,10 +273,10 @@ function NodeSidebar({
         payload.customTypeId = null;
       }
 
-      await nodesService.update(node.id, payload);
+      await nodesService.update(persistedNode.id, payload);
 
       const updatedNode = {
-        ...node,
+        ...persistedNode,
         title: title.trim(),
         description: description?.trim() || '',
         typeId: payload.typeId,
@@ -405,7 +422,7 @@ function NodeSidebar({
           onClick={() => setShowQuestionManager(true)}
         >
           <span className="material-icons">visibility</span>
-          Управлять
+          Изменить
         </button>
       </div>
     );
@@ -698,7 +715,7 @@ function NodeSidebar({
                     onClick={() => setShowQuestionManager(true)}
                   >
                     <span className="material-icons">quiz</span>
-                    Управлять
+                    Изменить
                   </button>
                 </div>
                 {renderQuestionsSummary()}

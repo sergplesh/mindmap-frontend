@@ -490,7 +490,41 @@
   cursor: not-allowed;
 }
 
-/* Р”РѕР±Р°РІСЊС‚Рµ РІ AccessManager.css */
+.bulk-import-section {
+  margin-top: 12px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.bulk-import-btn {
+  padding: 8px 16px;
+  background: #9b59b6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.bulk-import-btn .material-icons {
+  font-size: 18px;
+}
+
+.bulk-import-btn:hover:not(:disabled) {
+  background: #8e44ad;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+}
+
+.bulk-import-btn:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
 
 .bulk-import-section {
   margin-top: 12px;
@@ -528,46 +562,6 @@
   cursor: not-allowed;
 }
 
-/* Р”РѕР±Р°РІСЊС‚Рµ СЌС‚Рё СЃС‚РёР»Рё РІ РєРѕРЅРµС† С„Р°Р№Р»Р° AccessManager.css */
-
-/* РљРЅРѕРїРєР° РјР°СЃСЃРѕРІРѕРіРѕ РёРјРїРѕСЂС‚Р° */
-.bulk-import-section {
-  margin-top: 12px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.bulk-import-btn {
-  padding: 8px 16px;
-  background: #9b59b6;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.bulk-import-btn .material-icons {
-  font-size: 18px;
-}
-
-.bulk-import-btn:hover:not(:disabled) {
-  background: #8e44ad;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
-}
-
-.bulk-import-btn:disabled {
-  background: #bdc3c7;
-  cursor: not-allowed;
-}
-
-/* РљРЅРѕРїРєР° РѕР±РЅРѕРІР»РµРЅРёСЏ */
 .refresh-btn {
   margin-top: 16px;
   padding: 10px 16px;
@@ -597,7 +591,6 @@
   cursor: not-allowed;
 }
 
-/* РЎС‡РµС‚С‡РёРє РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ */
 .users-count {
   font-size: 12px;
   font-weight: normal;
@@ -605,7 +598,6 @@
   margin-left: 4px;
 }
 
-/* РљРЅРѕРїРєР° РѕС‡РёСЃС‚РєРё РїРѕРёСЃРєР° */
 .clear-search {
   position: absolute;
   right: 8px;
@@ -627,7 +619,6 @@
   color: #e53e3e;
 }
 
-/* РЈР»СѓС‡С€РµРЅРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ */
 .message {
   margin-top: 16px;
   padding: 12px;
@@ -662,7 +653,6 @@
   border: 1px solid #b8e6c9;
 }
 
-/* РЈР»СѓС‡С€РµРЅРЅРѕРµ РїСѓСЃС‚РѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ */
 .empty-state {
   text-align: center;
   padding: 40px 20px;
@@ -685,7 +675,6 @@
   color: #bdc3c7;
 }
 
-/* РЈР»СѓС‡С€РµРЅРЅС‹Р№ СЃРїРёРЅРЅРµСЂ Р·Р°РіСЂСѓР·РєРё */
 .loading-spinner {
   text-align: center;
   padding: 40px;

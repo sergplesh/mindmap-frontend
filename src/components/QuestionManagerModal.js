@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { questionsService } from '../services/questionsService';
 import './QuestionManagerModal.css';
 
-const buildEmptyOption = () => ({ text: '', isCorrect: false });
+const buildEmptyOption = () => ({ id: null, text: '', isCorrect: false });
 
 const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
   const [questions, setQuestions] = useState([]);
@@ -20,7 +20,6 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     if (isOpen && node?.id) {
       loadQuestions();
     } else {
-      // Сбрасываем состояние при закрытии
       setShowForm(false);
       setEditingQuestion(null);
       setError('');
@@ -60,6 +59,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
       text: question.questionText,
       type: question.questionType,
       options: question.answerOptions.map(opt => ({
+        id: opt.id ?? null,
         text: opt.optionText,
         isCorrect: opt.isCorrect
       }))
@@ -76,22 +76,35 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
 
   const handleOptionChange = (index, value) => {
     setFormData(prev => {
-      const options = [...prev.options];
-      options[index].text = value;
+      const options = prev.options.map((option, optionIndex) => (
+        optionIndex === index
+          ? { ...option, text: value }
+          : option
+      ));
       return { ...prev, options };
     });
   };
 
   const handleOptionCorrectChange = (index) => {
     setFormData(prev => {
-      const options = [...prev.options];
-      if (prev.type === 'single_choice') {
-        options.forEach((opt, i) => {
-          opt.isCorrect = i === index;
-        });
-      } else {
-        options[index].isCorrect = !options[index].isCorrect;
-      }
+      const options = prev.options.map((option, optionIndex) => {
+        if (prev.type === 'single_choice') {
+          return {
+            ...option,
+            isCorrect: optionIndex === index
+          };
+        }
+
+        if (optionIndex === index) {
+          return {
+            ...option,
+            isCorrect: !option.isCorrect
+          };
+        }
+
+        return option;
+      });
+
       return { ...prev, options };
     });
   };
@@ -142,6 +155,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
       const preparedOptions = formData.options
         .filter(opt => opt.text.trim())
         .map(opt => ({
+          id: opt.id ?? undefined,
           optionText: opt.text.trim(),
           isCorrect: opt.isCorrect
         }));
@@ -150,9 +164,9 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
         // Обновление существующего вопроса
         await questionsService.update(editingQuestion.id, {
           questionText: formData.text.trim(),
-          questionType: formData.type
+          questionType: formData.type,
+          answerOptions: preparedOptions
         });
-        // TODO: добавить метод для обновления вариантов ответов
       } else {
         // Создание нового вопроса
         await questionsService.create({

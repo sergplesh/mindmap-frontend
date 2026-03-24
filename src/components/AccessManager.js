@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { accessService } from '../services/accessService';
 import { authService } from '../services/authService';
 import BulkImportModal from './BulkImportModal';
@@ -15,13 +15,7 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
   const [showBulkImport, setShowBulkImport] = useState(false);
   const currentUser = authService.getCurrentUser();
 
-  useEffect(() => {
-    if (isOwner) {
-      loadAccess();
-    }
-  }, [mapId, isOwner]);
-
-  const loadAccess = async () => {
+  const loadAccess = useCallback(async () => {
     setLoading(true);
     setError('');
 
@@ -53,11 +47,12 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
 
       const normalizedUsers = validUsers
         .map(user => ({
-          id: user.id || user.user?.id,
+          accessId: user.accessId || user.id || user.access?.id,
+          userId: user.userId || user.user?.id || null,
           username: user.username || user.user?.username,
           role: user.role || user.access?.role || 'observer'
         }))
-        .filter(user => user.id && user.username);
+        .filter(user => user.accessId && user.username);
 
       console.log('Нормализованные пользователи:', normalizedUsers);
       setUsers(normalizedUsers);
@@ -71,7 +66,13 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [mapId]);
+
+  useEffect(() => {
+    if (isOwner) {
+      loadAccess();
+    }
+  }, [isOwner, loadAccess]);
 
   const handleInvite = async () => {
     if (!inviteUsername.trim()) {
@@ -175,6 +176,17 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
     if (!user || !user.username) return false;
     return user.username.toLowerCase().includes(searchTerm.toLowerCase());
   });
+
+  const isCurrentUser = useCallback(
+    user => (
+      user?.userId !== undefined &&
+      user?.userId !== null &&
+      currentUser?.id !== undefined &&
+      currentUser?.id !== null &&
+      String(user.userId) === String(currentUser.id)
+    ),
+    [currentUser?.id]
+  );
 
   if (!isOwner) {
     return (
@@ -346,14 +358,14 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
 
               {!loading &&
                 filteredUsers.map(user => (
-                  <div key={user.id} className="user-item">
+                  <div key={user.accessId} className="user-item">
                     <div className="user-info">
                       <div className="user-avatar">
                         <span className="material-icons">account_circle</span>
                       </div>
                       <div className="user-details">
                         <span className="username">{user.username}</span>
-                        {user.id === currentUser?.id && (
+                        {isCurrentUser(user) && (
                           <span className="current-user-badge">Это вы</span>
                         )}
                       </div>
@@ -362,34 +374,25 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
                     <div className="user-actions">
                       <select
                         value={user.role}
-                        onChange={e => handleRoleChange(user.id, e.target.value)}
-                        disabled={loading || user.id === currentUser?.id}
+                        onChange={e => handleRoleChange(user.accessId, e.target.value)}
+                        disabled={loading}
                         className={`role-select ${user.role}`}
                       >
                         <option value="observer">Наблюдатель</option>
                         <option value="learner">Обучающийся</option>
                       </select>
 
-                      {user.id !== currentUser?.id && (
-                        <button
-                          className="remove-btn"
-                          onClick={() => handleRemoveAccess(user.id, user.username)}
-                          disabled={loading}
-                          title="Удалить доступ"
-                        >
-                          <span className="material-icons">delete</span>
-                        </button>
-                      )}
+                      <button
+                        className="remove-btn"
+                        onClick={() => handleRemoveAccess(user.accessId, user.username)}
+                        disabled={loading}
+                        title="Удалить доступ"
+                      >
+                        <span className="material-icons">delete</span>
+                      </button>
                     </div>
                   </div>
                 ))}
-            </div>
-
-            <div className="owner-info">
-              <span className="material-icons">star</span>
-              <span>
-                Вы владелец карты - можете управлять доступом и редактировать карту
-              </span>
             </div>
 
             <button

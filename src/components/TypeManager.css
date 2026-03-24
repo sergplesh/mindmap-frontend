@@ -89,7 +89,6 @@
   margin-bottom: 16px;
 }
 
-/* РљРЅРѕРїРєР° РґРѕР±Р°РІР»РµРЅРёСЏ */
 .add-type-btn {
   padding: 8px 16px;
   background: #27ae60;
@@ -115,7 +114,6 @@
   box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
 }
 
-/* РЎРµС‚РєР° С‚РёРїРѕРІ */
 .types-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -241,7 +239,6 @@
   transform: scale(1.05);
 }
 
-/* Р¤РѕСЂРјР° СЃРѕР·РґР°РЅРёСЏ С‚РёРїР° */
 .create-type-form {
   background: #f8fafc;
   border-radius: 12px;
@@ -257,7 +254,6 @@
   font-weight: 600;
 }
 
-/* РЁР°Р±Р»РѕРЅС‹ */
 .templates-section {
   margin-bottom: 20px;
 }
@@ -320,7 +316,6 @@
   color: #7f8c8d;
 }
 
-/* Р¤РѕСЂРјР° */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -524,7 +519,6 @@
   color: white;
 }
 
-/* РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ */
 .preview-section {
   background: #fff;
   border-radius: 8px;
@@ -551,7 +545,6 @@
   align-items: center;
 }
 
-/* Р¤РѕСЂРјР° РґРµР№СЃС‚РІРёР№ */
 .form-actions {
   display: flex;
   gap: 12px;
@@ -599,7 +592,6 @@
   background: #7f8c8d;
 }
 
-/* РњРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ РґР»СЏ РїРѕР»СЏ */
 .field-modal-overlay {
   position: fixed;
   top: 0;
@@ -652,7 +644,6 @@
   justify-content: flex-end;
 }
 
-/* РџСѓСЃС‚РѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ */
 .empty-types {
   text-align: center;
   padding: 40px;
@@ -682,7 +673,6 @@
   font-size: 13px;
 }
 
-/* РРЅС„РѕСЂРјР°С†РёРѕРЅРЅРѕРµ СЃРѕРѕР±С‰РµРЅРёРµ */
 .info-message {
   background: #e8f0fe;
   border-left: 4px solid #3498db;
@@ -699,7 +689,6 @@
   color: #3498db;
 }
 
-/* Р§РµРєР±РѕРєСЃ */
 .form-group.checkbox {
   display: flex;
   align-items: center;
@@ -714,7 +703,6 @@
   cursor: pointer;
 }
 
-/* РћС€РёР±РєР° */
 .error-message {
   background: #fee;
   color: #e74c3c;
@@ -728,7 +716,6 @@
   gap: 8px;
 }
 
-/* РђРґР°РїС‚Р°С†РёСЏ */
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;
@@ -748,9 +735,6 @@
   }
 }
 
-/* Р”РѕР±Р°РІСЊС‚Рµ РІ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ TypeManager.css */
-
-/* РЎРµРєС†РёСЏ СЃ С€Р°Р±Р»РѕРЅР°РјРё */
 .templates-section {
   margin-bottom: 20px;
 }
@@ -808,7 +792,6 @@
   color: #7f8c8d;
 }
 
-/* Р¤РѕСЂРјР° СЃРѕР·РґР°РЅРёСЏ С‚РёРїР° */
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -816,7 +799,6 @@
   margin-bottom: 16px;
 }
 
-/* РљР°СЃС‚РѕРјРЅС‹Рµ РїРѕР»СЏ */
 .custom-fields-section {
   margin-top: 20px;
   padding-top: 16px;
@@ -893,7 +875,6 @@
   gap: 4px;
 }
 
-/* РњРѕРґР°Р»СЊРЅРѕРµ РѕРєРЅРѕ РґР»СЏ РїРѕР»СЏ */
 .field-modal-overlay {
   position: fixed;
   top: 0;
@@ -940,7 +921,6 @@
   justify-content: flex-end;
 }
 
-/* РџСЂРµРґРїСЂРѕСЃРјРѕС‚СЂ */
 .preview-section {
   background: #fff;
   border-radius: 8px;
@@ -965,7 +945,6 @@
   display: block;
 }
 
-/* РђРґР°РїС‚Р°С†РёСЏ */
 @media (max-width: 768px) {
   .form-row {
     grid-template-columns: 1fr;

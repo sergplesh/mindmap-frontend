@@ -474,12 +474,6 @@ const BulkImportModal = ({ isOpen, onClose, onImport, mapId, isOwner }) => {
                   <option value="observer">Наблюдатель</option>
                 </select>
               </div>
-              <p className="role-hint">
-                Выбранная роль будет применена ко всем пользователям в списке.
-                {selectedRole === 'learner'
-                  ? ' Обучающиеся будут открывать узлы через тесты.'
-                  : ' Наблюдатели увидят все узлы сразу.'}
-              </p>
             </div>
 
             <div className="info-box">
@@ -490,11 +484,6 @@ const BulkImportModal = ({ isOpen, onClose, onImport, mapId, isOwner }) => {
                 <p>
                   Поддерживаются также названия колонок: login, user, name, логин,
                   пользователь
-                </p>
-                <p className="info-note">
-                  <span className="material-icons">info_outline</span>
-                  <strong>Важно:</strong> Для пользователей, которые уже имеют доступ,
-                  их роль будет изменена на выбранную.
                 </p>
               </div>
             </div>

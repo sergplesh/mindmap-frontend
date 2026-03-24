@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MindElixir from 'mind-elixir';
 import '/node_modules/mind-elixir/dist/MindElixir.css';
-// import 'mind-elixir/dist/MindElixir.css';
 import { mapsService } from '../services/mapsService';
 import { nodesService } from '../services/nodesService';
 import { edgesService } from '../services/edgesService';
@@ -102,6 +101,41 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
   
   const visited = new Set();
   
+  const sortChildIds = (parentLevel, childIds) => {
+    const sortedChildIds = [...childIds];
+
+    sortedChildIds.sort((leftId, rightId) => {
+      const leftNode = nodeMap.get(String(leftId));
+      const rightNode = nodeMap.get(String(rightId));
+
+      if (!leftNode || !rightNode) {
+        return 0;
+      }
+
+      if (parentLevel === 0) {
+        const leftDirection = resolveStoredRootDirection(leftNode);
+        const rightDirection = resolveStoredRootDirection(rightNode);
+        const leftBucket = leftDirection === MindElixir.LEFT ? 0 : leftDirection === MindElixir.RIGHT ? 1 : 2;
+        const rightBucket = rightDirection === MindElixir.LEFT ? 0 : rightDirection === MindElixir.RIGHT ? 1 : 2;
+
+        if (leftBucket !== rightBucket) {
+          return leftBucket - rightBucket;
+        }
+      }
+
+      const leftOrder = Number.isFinite(leftNode.yPosition) ? leftNode.yPosition : Number.MAX_SAFE_INTEGER;
+      const rightOrder = Number.isFinite(rightNode.yPosition) ? rightNode.yPosition : Number.MAX_SAFE_INTEGER;
+
+      if (leftOrder !== rightOrder) {
+        return leftOrder - rightOrder;
+      }
+
+      return 0;
+    });
+
+    return sortedChildIds;
+  };
+  
   const buildNode = (nodeId, level = 0) => {
     const stringId = String(nodeId);
     
@@ -153,17 +187,18 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
       const isLocked = !isUnlocked;
       
       const shouldStopAtLockedQuiz = isLearner && isLocked && node.hasQuestions;
-      const childIds = shouldStopAtLockedQuiz ? [] : (childrenMap.get(stringId) || []);
+      const childIds = shouldStopAtLockedQuiz ? [] : sortChildIds(level, childrenMap.get(stringId) || []);
       const children = childIds
         .map(childId => buildNode(childId, level + 1))
         .filter(child => child !== null && child !== undefined);
+      const storedRootDirection = level === 1 ? resolveStoredRootDirection(node) : null;
     
-    // ВАЖНО: используем существующий ID узла как строку
     return {
-      id: stringId, // Сохраняем оригинальный ID как строку
+      id: stringId,
       topic: node.title || 'Узел',
       children: children.length > 0 ? children : undefined,
       expanded: true,
+      ...(storedRootDirection !== null ? { direction: storedRootDirection } : {}),
       data: {
         description: node.description || '',
         typeId: node.typeId,
@@ -176,6 +211,8 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
           isUnlocked: isUnlocked,
           isVisible: node.isVisible !== false,
           level: level,
+          xPosition: node.xPosition ?? 0,
+          yPosition: node.yPosition ?? 0,
           originalId: node.id // Сохраняем оригинальный ID для обратной конвертации
         }
     };
@@ -197,7 +234,7 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
   }
   
   console.log('Построенный root узел:', root);
-  balanceRootChildrenDirections(root);
+  ensureRootChildrenDirections(root);
   
   const arrows = visibleEdges
     .filter((edge) => !edge.isHierarchy)
@@ -222,7 +259,7 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
         edgeId: edge.id,
         from: String(edge.sourceNodeId),
         to: String(edge.targetNodeId),
-        label: edge.type?.label || edge.typeLabel || '',
+        label: edge.label || edge.type?.label || edge.typeLabel || '',
         typeId: edge.typeId ?? null,
         customTypeId: edge.customTypeId ?? null,
         style
@@ -252,7 +289,7 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
 
   const generateTempId = () => -(Date.now() + Math.floor(Math.random() * 10000));
 
-  const traverse = (node, parentId = null, level = 0) => {
+  const traverse = (node, parentId = null, level = 0, siblingIndex = 0) => {
     if (!node) return;
     // Пытаемся получить существующий ID из данных узла
     let nodeId;
@@ -288,6 +325,15 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
     }
     processedIds.add(nodeId);
     
+    const rootDirection = level === 1
+      ? node.direction
+      : null;
+    const xPosition = rootDirection === MindElixir.LEFT
+      ? -1
+      : rootDirection === MindElixir.RIGHT
+        ? 1
+        : 0;
+
     newNodes.push({
       id: nodeId,
       _mindId: mindId,
@@ -295,8 +341,8 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
       description: node.data?.description || '',
       typeId: node.data?.typeId,
       customTypeId: node.data?.customTypeId,
-      xPosition: node.data?.xPosition || 0,
-      yPosition: node.data?.yPosition || 0,
+      xPosition,
+      yPosition: siblingIndex,
       width: node.data?.width || 200,
       height: node.data?.height || 80,
       hasQuestions: node.data?.hasQuestions || false,
@@ -313,13 +359,31 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
     }
     
     if (node.children && node.children.length > 0) {
-      node.children.forEach(child => traverse(child, nodeId, level + 1));
+      let leftIndex = 0;
+      let rightIndex = 0;
+
+      node.children.forEach((child, childIndex) => {
+        if (level === 0) {
+          if (child.direction === MindElixir.LEFT) {
+            traverse(child, nodeId, level + 1, leftIndex);
+            leftIndex += 1;
+            return;
+          }
+
+          if (child.direction === MindElixir.RIGHT) {
+            traverse(child, nodeId, level + 1, rightIndex);
+            rightIndex += 1;
+            return;
+          }
+        }
+
+        traverse(child, nodeId, level + 1, childIndex);
+      });
     }
   };
   
   traverse(mindData.nodeData);
   
-  // Добавляем неиерархические связи из старых данных
   const resolveArrowNodeId = (value) => {
     const key = String(value);
     if (mindIdToNodeId && mindIdToNodeId.has(key)) {
@@ -347,6 +411,7 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
         sourceNodeId,
         targetNodeId,
         isHierarchy: false,
+        label: arrow.label || '',
         typeId: arrow.typeId ?? null,
         customTypeId: arrow.customTypeId ?? null
       };
@@ -396,19 +461,28 @@ const createMindElixirNode = (topic) => ({
   topic,
 });
 
-const balanceRootChildrenDirections = (rootNode) => {
+const resolveStoredRootDirection = (node) => {
+  if (typeof node?.xPosition !== 'number') return null;
+  if (node.xPosition < 0) return MindElixir.LEFT;
+  if (node.xPosition > 0) return MindElixir.RIGHT;
+  return null;
+};
+
+const ensureRootChildrenDirections = (rootNode) => {
   if (!rootNode?.children?.length) return false;
 
-  let leftCount = 0;
-  let rightCount = 0;
+  let leftCount = rootNode.children.filter((child) => child.direction === MindElixir.LEFT).length;
+  let rightCount = rootNode.children.filter((child) => child.direction === MindElixir.RIGHT).length;
   let changed = false;
 
   rootNode.children.forEach((child) => {
-    const nextDirection = leftCount <= rightCount ? MindElixir.LEFT : MindElixir.RIGHT;
-    if (child.direction !== nextDirection) {
-      child.direction = nextDirection;
-      changed = true;
+    if (child.direction === MindElixir.LEFT || child.direction === MindElixir.RIGHT) {
+      return;
     }
+
+    const nextDirection = leftCount <= rightCount ? MindElixir.LEFT : MindElixir.RIGHT;
+    child.direction = nextDirection;
+    changed = true;
 
     if (nextDirection === MindElixir.LEFT) {
       leftCount += 1;
@@ -470,6 +544,24 @@ function MapEditor({ map, userId, onClose }) {
       inlineEditCleanupRef.current();
       inlineEditCleanupRef.current = null;
     }
+  }, []);
+
+  const waitForSaveQueue = useCallback(async () => {
+    while (isSavingRef.current || pendingSaveRef.current) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+  }, []);
+
+  const commitPendingInlineEdit = useCallback(async () => {
+    const container = containerRef.current;
+    const inputBox = container?.querySelector('#input-box');
+
+    if (!inputBox || typeof inputBox.blur !== 'function') {
+      return;
+    }
+
+    inputBox.blur();
+    await new Promise((resolve) => setTimeout(resolve, 0));
   }, []);
 
   const updateConnectionDraft = useCallback((nextDraft) => {
@@ -539,20 +631,20 @@ function MapEditor({ map, userId, onClose }) {
     isOwnerRef.current = isOwner;
   }, [isOwner]);
 
-  useEffect(() => {
-    const loadTypes = async () => {
-      try {
-        setSystemNodeTypes(Object.values(NODE_TYPES));
+  const loadNodeTypes = useCallback(async () => {
+    try {
+      setSystemNodeTypes(Object.values(NODE_TYPES));
 
-        const nodeTypesData = await customTypesService.getTypes(map.id, 'node');
-        setCustomNodeTypes(nodeTypesData.custom);
-      } catch (error) {
-        console.error('Ошибка загрузки типов:', error);
-      }
-    };
-
-    loadTypes();
+      const nodeTypesData = await customTypesService.getTypes(map.id, 'node');
+      setCustomNodeTypes(nodeTypesData.custom);
+    } catch (error) {
+      console.error('Ошибка загрузки типов:', error);
+    }
   }, [map.id]);
+
+  useEffect(() => {
+    loadNodeTypes();
+  }, [loadNodeTypes]);
 
   const applyCustomStyles = useCallback(() => {
     if (!mindMapRef.current) return;
@@ -673,7 +765,7 @@ function MapEditor({ map, userId, onClose }) {
     const selectedNodeId = mind.currentNode?.nodeObj?.id
       ? String(mind.currentNode.nodeObj.id)
       : null;
-    const hasChanges = balanceRootChildrenDirections(mind.nodeData);
+    const hasChanges = ensureRootChildrenDirections(mind.nodeData);
 
     if (!hasChanges) return;
 
@@ -828,6 +920,15 @@ function MapEditor({ map, userId, onClose }) {
       }, 0);
     }
   }, [map.id, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches]);
+
+  const handleTypesChange = useCallback(async (category) => {
+    if (category === 'node') {
+      await loadNodeTypes();
+      return;
+    }
+
+    await loadMap();
+  }, [loadMap, loadNodeTypes]);
 
   const createDemoMap = () => {
     if (!containerRef.current) return;
@@ -1262,6 +1363,8 @@ function MapEditor({ map, userId, onClose }) {
       pendingSaveRef.current = true;
       return;
     }
+
+    await commitPendingInlineEdit();
     
     const mindData = mindMapRef.current.getData();
     if (!mindData || !mindData.nodeData) {
@@ -1298,6 +1401,8 @@ function MapEditor({ map, userId, onClose }) {
             description: node.description,
             typeId: node.typeId,
             customTypeId: node.customTypeId,
+            xPosition: node.xPosition,
+            yPosition: node.yPosition,
             width: node.width,
             height: node.height
           });
@@ -1348,13 +1453,7 @@ function MapEditor({ map, userId, onClose }) {
         const sourceId = String(edge.sourceNodeId);
         const targetId = String(edge.targetNodeId);
         const hierarchyFlag = edge.isHierarchy ? '1' : '0';
-        if (edge.isHierarchy) {
-          return `${sourceId}|${targetId}|${hierarchyFlag}`;
-        }
-        const relationType = edge.customTypeId !== undefined && edge.customTypeId !== null
-          ? `custom:${edge.customTypeId}`
-          : `system:${edge.typeId ?? ''}`;
-        return `${sourceId}|${targetId}|${hierarchyFlag}|${relationType}`;
+        return `${sourceId}|${targetId}|${hierarchyFlag}`;
       };
 
       const existingEdgeByKey = new Map();
@@ -1373,12 +1472,43 @@ function MapEditor({ map, userId, onClose }) {
 
       const createdEdgesByKey = new Map();
       for (const edge of normalizedEdges) {
-        if (edge.id) continue;
+        if (edge.id) {
+          const existing = allEdges.find((currentEdge) => currentEdge.id === edge.id);
+          const existingLabel = existing?.label ?? existing?.typeLabel ?? '';
+          const nextLabel = edge.label ?? '';
+          const existingTypeId = existing?.typeId ?? null;
+          const existingCustomTypeId = existing?.customTypeId ?? null;
+
+          if (
+            existing &&
+            (
+              existingLabel !== nextLabel ||
+              existingTypeId !== (edge.typeId ?? null) ||
+              existingCustomTypeId !== (edge.customTypeId ?? null)
+            )
+          ) {
+            await edgesService.update(edge.id, {
+              typeId: edge.typeId ?? null,
+              customTypeId: edge.customTypeId ?? null,
+              label: nextLabel
+            });
+          }
+
+          createdEdgesByKey.set(edgeKey(edge), {
+            ...existing,
+            ...edge,
+            id: edge.id,
+            label: nextLabel
+          });
+          continue;
+        }
+
         const payload = {
           mapId: map.id,
           sourceNodeId: edge.sourceNodeId,
           targetNodeId: edge.targetNodeId,
-          isHierarchy: edge.isHierarchy
+          isHierarchy: edge.isHierarchy,
+          label: edge.label ?? ''
         };
         if (edge.typeId !== undefined && edge.typeId !== null) {
           payload.typeId = edge.typeId;
@@ -1434,7 +1564,7 @@ function MapEditor({ map, userId, onClose }) {
         }, 0);
       }
     }
-  }, [isOwner, map.id, allNodes, allEdges]);
+  }, [isOwner, map.id, allNodes, allEdges, commitPendingInlineEdit]);
 
   useEffect(() => {
     saveChangesRef.current = saveChanges;
@@ -1466,7 +1596,6 @@ function MapEditor({ map, userId, onClose }) {
     setShowQuizModal(true);
   }, [lockedNodePromptData]);
 
-  // Исправленная версия добавления темы
   const handleAddTopic = useCallback(() => {
     const mind = mindMapRef.current;
     if (!mind || !isOwner) return;
@@ -1501,7 +1630,6 @@ function MapEditor({ map, userId, onClose }) {
     }
   }, [isOwner, saveChanges, applyCustomStyles]);
 
-  // Исправленная версия добавления подтемы
   const handleAddSubtopic = useCallback(() => {
     const mind = mindMapRef.current;
     if (!mind || !isOwner) return;
@@ -1614,9 +1742,46 @@ function MapEditor({ map, userId, onClose }) {
 
   // Обновление узла после редактирования
   const handleNodeUpdate = useCallback(async () => {
+    await saveChangesRef.current?.();
+    await waitForSaveQueue();
     await loadMap();
     setSelectedNode(null);
-  }, [loadMap]);
+  }, [loadMap, waitForSaveQueue]);
+
+  const handleEnsureNodeSaved = useCallback(async (nodeLike) => {
+    const nodeId = nodeLike?.id;
+    if (nodeId === undefined || nodeId === null) {
+      return null;
+    }
+
+    if (/^\d+$/.test(String(nodeId)) || typeof nodeId === 'number') {
+      return allNodesRef.current.find((node) => isSameNodeId(node.id, nodeId)) || nodeLike;
+    }
+
+    await saveChangesRef.current?.();
+    await waitForSaveQueue();
+
+    const persistedId = mindIdToNodeIdRef.current.get(String(nodeId));
+    if (!persistedId) {
+      return null;
+    }
+
+    const persistedNode = allNodesRef.current.find((node) => isSameNodeId(node.id, persistedId));
+    if (persistedNode) {
+      return persistedNode;
+    }
+
+    try {
+      return await nodesService.getById(persistedId);
+    } catch (error) {
+      console.error('Ошибка загрузки только что сохраненного узла:', error);
+      return {
+        ...nodeLike,
+        id: persistedId,
+        mapId: map.id
+      };
+    }
+  }, [map.id, waitForSaveQueue]);
 
   // Экспорт в PNG
   const handleToggleConnectionMode = useCallback(() => {
@@ -1629,11 +1794,27 @@ function MapEditor({ map, userId, onClose }) {
     updateConnectionDraft({ active: true, sourceMindId: null, sourceTitle: '' });
   }, [resetConnectionDraft, updateConnectionDraft]);
 
-  const handleExportPNG = useCallback(() => {
-    if (mindMapRef.current) {
-      mindMapRef.current.export();
+  const handleExportPNG = useCallback(async () => {
+    if (!mindMapRef.current) return;
+
+    try {
+      const blob = await mindMapRef.current.exportPng();
+
+      if (!blob) {
+        throw new Error('PNG blob was not created');
+      }
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${map.title || 'карта'}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Ошибка экспорта карты в PNG:', error);
+      alert('Не удалось экспортировать карту в PNG');
     }
-  }, []);
+  }, [map.title]);
 
   // Экспорт в JSON
   const handleExportJSON = useCallback(() => {
@@ -1697,7 +1878,10 @@ function MapEditor({ map, userId, onClose }) {
             </button>
             
             <button
-              onClick={() => setShowTypeManager(true)}
+              onClick={() => {
+                setTypeManagerCategory('node');
+                setShowTypeManager(true);
+              }}
               className="toolbar-btn"
               data-tooltip="Типы узлов"
             >
@@ -1777,6 +1961,7 @@ function MapEditor({ map, userId, onClose }) {
           customNodeTypes={customNodeTypes}
           onTypesUpdate={loadMap}
           onRefreshMap={handleNodeUpdate}
+          onEnsureNodeSaved={handleEnsureNodeSaved}
           startEditing={false}
           onDetach={() => {}}
           isDraggable={false}
@@ -1798,7 +1983,7 @@ function MapEditor({ map, userId, onClose }) {
           isOwner={isOwner}
           category={typeManagerCategory}
           onClose={() => setShowTypeManager(false)}
-          onTypesChange={loadMap}
+          onTypesChange={handleTypesChange}
         />
       )}
       
