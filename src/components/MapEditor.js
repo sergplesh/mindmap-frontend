@@ -156,9 +156,9 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
         return null;
       }
     
-    let nodeColor = '';
+    let nodeColor = null;
     let nodeIcon = null;
-    let nodeShape = 'rect';
+    let nodeShape = null;
     const hasCustomType = node.customTypeId !== null && node.customTypeId !== undefined;
     
     if (hasCustomType && node.customTypeId) {
@@ -175,8 +175,6 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
         nodeShape = systemType.shape || 'rect';
         nodeIcon = systemType.icon;
       }
-    } else {
-      nodeColor = '#e0e0e0';
     }
     
       const isUnlocked = isLearner
@@ -204,7 +202,7 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
         typeId: node.typeId,
         customTypeId: node.customTypeId,
         color: isLocked ? '#95a5a6' : nodeColor,
-        textColor: isLocked ? '#ffffff' : getContrastColor(nodeColor),
+        textColor: isLocked ? '#ffffff' : (nodeColor ? getContrastColor(nodeColor) : null),
         icon: isLocked ? 'lock' : nodeIcon,
           shape: nodeShape,
           hasQuestions: node.hasQuestions || false,
@@ -509,6 +507,7 @@ function MapEditor({ map, userId, onClose }) {
   const isOwnerRef = useRef(map.ownerId === userId || map.userRole === 'owner');
   const inlineEditCleanupRef = useRef(null);
   const connectionDraftRef = useRef({ active: false, sourceMindId: null, sourceTitle: '' });
+  const setupEventListenersRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [userRole, setUserRole] = useState(map.ownerId === userId ? 'owner' : (map.userRole || 'observer'));
   const [showAccessManager, setShowAccessManager] = useState(false);
@@ -529,6 +528,7 @@ function MapEditor({ map, userId, onClose }) {
   const [allEdges, setAllEdges] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [areNodeTypesLoaded, setAreNodeTypesLoaded] = useState(false);
   
   const isOwner = map.ownerId === userId || userRole === 'owner';
   const isSameNodeId = (left, right) => (
@@ -632,6 +632,7 @@ function MapEditor({ map, userId, onClose }) {
   }, [isOwner]);
 
   const loadNodeTypes = useCallback(async () => {
+    setAreNodeTypesLoaded(false);
     try {
       setSystemNodeTypes(Object.values(NODE_TYPES));
 
@@ -639,6 +640,8 @@ function MapEditor({ map, userId, onClose }) {
       setCustomNodeTypes(nodeTypesData.custom);
     } catch (error) {
       console.error('Ошибка загрузки типов:', error);
+    } finally {
+      setAreNodeTypesLoaded(true);
     }
   }, [map.id]);
 
@@ -679,18 +682,22 @@ function MapEditor({ map, userId, onClose }) {
             node.setAttribute('data-level', String(mindNode.data.level));
           }
 
-          if (mindNode.id === root.id) {
-            node.style.border = '3px solid #f39c12';
-            node.style.boxShadow = '0 4px 12px rgba(243, 156, 18, 0.3)';
-            node.style.fontWeight = 'bold';
-          }
-          
+          // Clear previous type-specific inline styling before applying fresh data.
+          node.style.border = '';
+          node.style.boxShadow = '';
+          node.style.fontWeight = '';
+          node.style.backgroundColor = '';
+          node.style.color = '';
+          node.style.borderRadius = '';
+          node.style.padding = '';
+          node.style.clipPath = '';
+
           if (mindNode.data?.color) {
             node.style.backgroundColor = mindNode.data.color;
             node.style.color = mindNode.data.textColor || '#333333';
           }
           
-          const shape = mindNode.data?.shape || 'rect';
+          const shape = mindNode.data?.shape;
           if (shape === 'circle') {
             node.style.borderRadius = '50%';
           } else if (shape === 'oval') {
@@ -834,6 +841,76 @@ function MapEditor({ map, userId, onClose }) {
   const loadMap = useCallback(async () => {
     isInitializingRef.current = true;
     setIsLoading(true);
+
+    const renderDemoMap = () => {
+      if (!containerRef.current) return;
+
+      console.log('Создаем демо-карту');
+
+      const demoData = {
+        nodeData: {
+          id: 'root',
+          topic: map.title || 'Карта знаний',
+          expanded: true,
+          children: [
+            {
+              id: 'child1',
+              topic: 'Тема 1',
+              expanded: true,
+              children: [
+                { id: 'child1_1', topic: 'Подтема 1.1', expanded: true },
+                { id: 'child1_2', topic: 'Подтема 1.2', expanded: true }
+              ]
+            },
+            {
+              id: 'child2',
+              topic: 'Тема 2',
+              expanded: true,
+              children: [
+                { id: 'child2_1', topic: 'Подтема 2.1', expanded: true }
+              ]
+            },
+            {
+              id: 'child3',
+              topic: 'Тема 3',
+              expanded: true
+            }
+          ]
+        }
+      };
+
+      if (mindMapRef.current) {
+        cleanupMindMapListeners();
+        mindMapRef.current.destroy();
+      }
+
+      isInitializingRef.current = true;
+      mindMapRef.current = new MindElixir({
+        el: containerRef.current,
+        direction: MindElixir.SIDE,
+        draggable: isOwner,
+        contextMenu: isOwner,
+        toolBar: false,
+        nodeMenu: false,
+        keypress: isOwner,
+        locale: 'ru'
+      });
+
+      mindMapRef.current.init(demoData);
+      patchMindMapMethods(mindMapRef.current);
+      rebalanceRootBranches(mindMapRef.current);
+      console.log('Демо-карта создана');
+      setTimeout(() => {
+        isInitializingRef.current = false;
+      }, 0);
+
+      setTimeout(() => {
+        applyCustomStyles();
+      }, 500);
+
+      setupEventListenersRef.current?.();
+    };
+
     try {
       console.log('Загрузка карты...');
       const fullMap = await mapsService.getFullMap(map.id);
@@ -888,11 +965,11 @@ function MapEditor({ map, userId, onClose }) {
         mindMapRef.current = new MindElixir({
           el: containerRef.current,
           direction: MindElixir.SIDE,
-          draggable: true,
-          contextMenu: isOwner,
+          draggable: nextIsOwner,
+          contextMenu: nextIsOwner,
           toolBar: false,
           nodeMenu: false,
-          keypress: true,
+          keypress: nextIsOwner,
           locale: 'ru'
         });
         
@@ -905,21 +982,21 @@ function MapEditor({ map, userId, onClose }) {
           applyCustomStyles();
         }, 500);
         
-        setupEventListeners();
+        setupEventListenersRef.current?.();
       } else {
         console.error('Нет данных для отображения');
-        createDemoMap();
+        renderDemoMap();
       }
     } catch (error) {
       console.error('Ошибка загрузки карты:', error);
-      createDemoMap();
+      renderDemoMap();
     } finally {
       setIsLoading(false);
       setTimeout(() => {
         isInitializingRef.current = false;
       }, 0);
     }
-  }, [map.id, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches]);
+  }, [map.id, map.title, map.ownerId, userId, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches, resetConnectionDraft]);
 
   const handleTypesChange = useCallback(async (category) => {
     if (category === 'node') {
@@ -929,75 +1006,6 @@ function MapEditor({ map, userId, onClose }) {
 
     await loadMap();
   }, [loadMap, loadNodeTypes]);
-
-  const createDemoMap = () => {
-    if (!containerRef.current) return;
-    
-    console.log('Создаем демо-карту');
-    
-    const demoData = {
-      nodeData: {
-        id: 'root',
-        topic: map.title || 'Карта знаний',
-        expanded: true,
-        children: [
-          {
-            id: 'child1',
-            topic: 'Тема 1',
-            expanded: true,
-            children: [
-              { id: 'child1_1', topic: 'Подтема 1.1', expanded: true },
-              { id: 'child1_2', topic: 'Подтема 1.2', expanded: true }
-            ]
-          },
-          {
-            id: 'child2',
-            topic: 'Тема 2',
-            expanded: true,
-            children: [
-              { id: 'child2_1', topic: 'Подтема 2.1', expanded: true }
-            ]
-          },
-          {
-            id: 'child3',
-            topic: 'Тема 3',
-            expanded: true
-          }
-        ]
-      }
-    };
-    
-    if (mindMapRef.current) {
-      cleanupMindMapListeners();
-      mindMapRef.current.destroy();
-    }
-    
-    isInitializingRef.current = true;
-    mindMapRef.current = new MindElixir({
-      el: containerRef.current,
-      direction: MindElixir.SIDE,
-      draggable: true,
-      contextMenu: isOwner,
-      toolBar: false,
-      nodeMenu: false,
-      keypress: true,
-      locale: 'ru'
-    });
-    
-    mindMapRef.current.init(demoData);
-    patchMindMapMethods(mindMapRef.current);
-    rebalanceRootBranches(mindMapRef.current);
-    console.log('Демо-карта создана');
-    setTimeout(() => {
-      isInitializingRef.current = false;
-    }, 0);
-    
-    setTimeout(() => {
-      applyCustomStyles();
-    }, 500);
-    
-    setupEventListeners();
-  };
 
   const setupEventListeners = useCallback(() => {
     if (!mindMapRef.current || !containerRef.current) return;
@@ -1076,7 +1084,22 @@ function MapEditor({ map, userId, onClose }) {
       const nodeIsUnlocked = nodeData?.isUnlocked ?? mindNode?.data?.isUnlocked;
       const openNodeInfo = (data) => {
         if (!data) return;
-        setSelectedNodeInfo(data);
+        setSelectedNodeInfo((prev) => {
+          if (prev && String(prev.id) === String(data.id)) {
+            return {
+              ...prev,
+              ...data,
+              description: data.description ?? prev.description ?? '',
+              hasQuestions: data.hasQuestions ?? prev.hasQuestions ?? false
+            };
+          }
+
+          return {
+            ...data,
+            description: data.description ?? '',
+            hasQuestions: data.hasQuestions ?? false
+          };
+        });
         setShowNodeInfoModal(true);
       };
       
@@ -1354,7 +1377,11 @@ function MapEditor({ map, userId, onClose }) {
     mind.clickHandlerOptions = listenerOptions;
     
     console.log('Обработчики событий настроены');
-  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, map.id, syncSelectedNodeTitle]);
+  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, map.id, resetConnectionDraft, syncSelectedNodeTitle, updateConnectionDraft]);
+
+  useEffect(() => {
+    setupEventListenersRef.current = setupEventListeners;
+  }, [setupEventListeners]);
 
   const saveChanges = useCallback(async () => {
     if (!mindMapRef.current || !isOwner || isInitializingRef.current) return;
@@ -1741,12 +1768,40 @@ function MapEditor({ map, userId, onClose }) {
   }, [selectedNode, allNodes, allEdges, loadMap]);
 
   // Обновление узла после редактирования
-  const handleNodeUpdate = useCallback(async () => {
+  const handleNodeUpdate = useCallback(async (options = {}) => {
+    const { keepSidebarOpen = false, nodeId = null } = options;
+    const targetNodeId = nodeId ?? selectedNode?.id;
+
     await saveChangesRef.current?.();
     await waitForSaveQueue();
     await loadMap();
+
+    if (
+      keepSidebarOpen &&
+      targetNodeId !== undefined &&
+      targetNodeId !== null &&
+      (/^\d+$/.test(String(targetNodeId)) || typeof targetNodeId === 'number')
+    ) {
+      const refreshedNode = allNodesRef.current.find((node) => isSameNodeId(node.id, targetNodeId));
+
+      if (refreshedNode) {
+        setSelectedNode(refreshedNode);
+        return;
+      }
+
+      try {
+        const freshNode = await nodesService.getById(targetNodeId);
+        if (freshNode) {
+          setSelectedNode(freshNode);
+          return;
+        }
+      } catch (error) {
+        console.error('Ошибка обновления выбранного узла:', error);
+      }
+    }
+
     setSelectedNode(null);
-  }, [loadMap, waitForSaveQueue]);
+  }, [loadMap, selectedNode?.id, waitForSaveQueue]);
 
   const handleEnsureNodeSaved = useCallback(async (nodeLike) => {
     const nodeId = nodeLike?.id;
@@ -1841,8 +1896,9 @@ function MapEditor({ map, userId, onClose }) {
   }, [cleanupMindMapListeners]);
 
   useEffect(() => {
+    if (!areNodeTypesLoaded) return;
     loadMap();
-  }, []);
+  }, [areNodeTypesLoaded, loadMap]);
 
   return (
     <div className="map-editor">

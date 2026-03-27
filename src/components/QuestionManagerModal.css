@@ -142,6 +142,41 @@
   gap: 16px;
 }
 
+.pagination-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.pagination-btn {
+  padding: 8px 14px;
+  border: 1px solid #d0d7de;
+  border-radius: 8px;
+  background: white;
+  color: #2c3e50;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  border-color: #3498db;
+  color: #3498db;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-info {
+  font-size: 13px;
+  color: #7f8c8d;
+}
+
 .question-item {
   background: #f8f9fa;
   border: 1px solid #e9ecef;

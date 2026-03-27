@@ -11,7 +11,7 @@ export const mapsService = {
     return response.data;
   },
 
-  async create(title, description, emoji = '🗺️') {
+  async create(title, description, emoji = null) {
     const response = await api.post('/maps', { title, description, emoji });
     return response.data;
   },

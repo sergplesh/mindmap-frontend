@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { questionsService } from '../services/questionsService';
+import { usePagination } from '../hooks/usePagination';
 import './QuestionManagerModal.css';
 
 const buildEmptyOption = () => ({ id: null, text: '', isCorrect: false });
@@ -15,18 +16,16 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     options: [buildEmptyOption(), buildEmptyOption()]
   });
   const [error, setError] = useState('');
+  const {
+    currentPage,
+    totalPages,
+    pageItems: visibleQuestions,
+    reset: resetPagination,
+    goNext,
+    goPrev
+  } = usePagination(questions, 3);
 
-  useEffect(() => {
-    if (isOpen && node?.id) {
-      loadQuestions();
-    } else {
-      setShowForm(false);
-      setEditingQuestion(null);
-      setError('');
-    }
-  }, [isOpen, node?.id]);
-
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     setLoading(true);
     try {
       const data = await questionsService.getByNode(node.id);
@@ -36,7 +35,19 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [node?.id]);
+
+  useEffect(() => {
+    if (isOpen && node?.id) {
+      resetPagination();
+      loadQuestions();
+    } else {
+      setShowForm(false);
+      setEditingQuestion(null);
+      setError('');
+      resetPagination();
+    }
+  }, [isOpen, node?.id, loadQuestions, resetPagination]);
 
   const resetForm = () => {
     setFormData({
@@ -138,7 +149,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
 
     const hasCorrect = validOptions.some(opt => opt.isCorrect);
     if (!hasCorrect) {
-      setError('Укажите правильный ответ(ы)');
+      setError('Укажите правильный ответ');
       return false;
     }
 
@@ -161,14 +172,12 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
         }));
 
       if (editingQuestion) {
-        // Обновление существующего вопроса
         await questionsService.update(editingQuestion.id, {
           questionText: formData.text.trim(),
           questionType: formData.type,
           answerOptions: preparedOptions
         });
       } else {
-        // Создание нового вопроса
         await questionsService.create({
           nodeId: node.id,
           questionText: formData.text.trim(),
@@ -179,7 +188,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
 
       await loadQuestions();
       handleCancel();
-      if (onQuestionsUpdate) onQuestionsUpdate();
+      if (onQuestionsUpdate) await onQuestionsUpdate();
     } catch (err) {
       setError(err.response?.data?.message || 'Ошибка сохранения вопроса');
     } finally {
@@ -194,7 +203,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     try {
       await questionsService.delete(questionId);
       await loadQuestions();
-      if (onQuestionsUpdate) onQuestionsUpdate();
+      if (onQuestionsUpdate) await onQuestionsUpdate();
     } catch (err) {
       alert('Ошибка удаления вопроса');
     } finally {
@@ -233,54 +242,78 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
                   <p className="empty-hint">Создайте первый вопрос для этого узла</p>
                 </div>
               ) : (
-                <div className="questions-list">
-                  {questions.map((question, idx) => (
-                    <div key={question.id} className="question-item">
-                      <div className="question-item-header">
-                        <span className="question-number">Вопрос {idx + 1}</span>
-                        <span className="question-type-badge">
-                          {question.questionType === 'single_choice' ? 'Один ответ' : 'Несколько ответов'}
-                        </span>
-                        <div className="question-item-actions">
-                          <button 
-                            className="icon-btn edit"
-                            onClick={() => handleEditClick(question)}
-                            title="Редактировать"
-                          >
-                            <span className="material-icons">edit</span>
-                          </button>
-                          <button 
-                            className="icon-btn delete"
-                            onClick={() => handleDelete(question.id)}
-                            title="Удалить"
-                          >
-                            <span className="material-icons">delete</span>
-                          </button>
+                <>
+                      <div className="questions-list">
+                        {visibleQuestions.map((question, idx) => (
+                        <div key={question.id} className="question-item">
+                          <div className="question-item-header">
+                          <span className="question-number">Вопрос {(currentPage - 1) * 3 + idx + 1}</span>
+                            <span className="question-type-badge">
+                              {question.questionType === 'single_choice' ? 'Один ответ' : 'Несколько ответов'}
+                            </span>
+                          <div className="question-item-actions">
+                            <button
+                              className="icon-btn edit"
+                              onClick={() => handleEditClick(question)}
+                              title="Редактировать"
+                            >
+                              <span className="material-icons">edit</span>
+                            </button>
+                            <button
+                              className="icon-btn delete"
+                              onClick={() => handleDelete(question.id)}
+                              title="Удалить"
+                            >
+                              <span className="material-icons">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="question-text">{question.questionText}</div>
+                        <div className="options-preview">
+                          {question.answerOptions?.map(opt => (
+                            <div
+                              key={opt.id}
+                              className={`option-preview ${opt.isCorrect ? 'correct' : ''}`}
+                            >
+                              <span className="material-icons">
+                                {opt.isCorrect ? 'check_circle' : 'radio_button_unchecked'}
+                              </span>
+                              <span>{opt.optionText}</span>
+                            </div>
+                          ))}
                         </div>
                       </div>
-                      <div className="question-text">{question.questionText}</div>
-                      <div className="options-preview">
-                        {question.answerOptions?.map(opt => (
-                          <div 
-                            key={opt.id} 
-                            className={`option-preview ${opt.isCorrect ? 'correct' : ''}`}
-                          >
-                            <span className="material-icons">
-                              {opt.isCorrect ? 'check_circle' : 'radio_button_unchecked'}
-                            </span>
-                            <span>{opt.optionText}</span>
-                          </div>
-                        ))}
-                      </div>
+                    ))}
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="pagination-controls">
+                      <button
+                        className="pagination-btn"
+                        onClick={goPrev}
+                        disabled={currentPage === 1}
+                      >
+                        Назад
+                      </button>
+                      <span className="pagination-info">
+                        Страница {currentPage} из {totalPages}
+                      </span>
+                      <button
+                        className="pagination-btn"
+                        onClick={goNext}
+                        disabled={currentPage === totalPages}
+                      >
+                        Далее
+                      </button>
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
             </>
           ) : (
             <div className="question-form">
               <h4>{editingQuestion ? 'Редактировать вопрос' : 'Новый вопрос'}</h4>
-              
+
               {error && <div className="error-message">{error}</div>}
 
               <div className="form-group">
@@ -341,7 +374,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
                     )}
                   </div>
                 ))}
-                
+
                 <button className="add-option-btn" onClick={addOption}>
                   <span className="material-icons">add</span>
                   Добавить вариант
@@ -352,8 +385,8 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
                 <button className="cancel-btn" onClick={handleCancel}>
                   Отмена
                 </button>
-                <button 
-                  className="save-btn" 
+                <button
+                  className="save-btn"
                   onClick={handleSave}
                   disabled={loading}
                 >

@@ -6,7 +6,7 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
   const isOwner = map.ownerId === userId;
 
   const formatDate = (dateString) => {
-    if (!dateString) return '—';
+    if (!dateString) return '-';
     const date = new Date(dateString);
     return date.toLocaleDateString('ru-RU', {
       day: '2-digit',
@@ -18,7 +18,7 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
   const truncateDescription = (text, maxLength = 120) => {
     if (!text) return null;
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    return `${text.substring(0, maxLength)}...`;
   };
 
   const handleDescriptionClick = (e) => {
@@ -36,6 +36,23 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
     onEdit(map);
   };
 
+  const getIconTitle = () => {
+    switch (map.emoji) {
+      case 'code':
+        return 'Программирование';
+      case 'functions':
+        return 'Математика';
+      case 'palette':
+        return 'Дизайн';
+      case 'translate':
+        return 'Языки';
+      case 'science':
+        return 'Наука';
+      default:
+        return '';
+    }
+  };
+
   return (
     <>
       <div className="map-card" onClick={() => onSelect(map)}>
@@ -43,14 +60,14 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
           <h3 className="map-card-title">{map.title || 'Без названия'}</h3>
           {isOwner && (
             <div className="map-card-actions">
-              <button 
+              <button
                 className="map-card-edit"
                 onClick={handleEditClick}
                 title="Редактировать"
               >
                 <span className="material-icons">edit</span>
               </button>
-              <button 
+              <button
                 className="map-card-delete"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -63,7 +80,7 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
             </div>
           )}
         </div>
-        
+
         <div className="map-card-content">
           {map.description && (
             <div className="map-card-description-container">
@@ -71,7 +88,7 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
                 {truncateDescription(map.description)}
               </p>
               {map.description.length > 120 && (
-                <button 
+                <button
                   className="show-more-btn"
                   onClick={handleDescriptionClick}
                 >
@@ -85,13 +102,7 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
         <div className="map-card-footer">
           <div className="footer-left">
             {map.emoji ? (
-              <div className="map-card-icon" title={
-                map.emoji === 'code' ? 'Программирование' :
-                map.emoji === 'functions' ? 'Математика' :
-                map.emoji === 'palette' ? 'Дизайн' :
-                map.emoji === 'translate' ? 'Языки' :
-                map.emoji === 'science' ? 'Наука' : ''
-              }>
+              <div className="map-card-icon" title={getIconTitle()}>
                 <span className="material-icons">{map.emoji}</span>
               </div>
             ) : (
@@ -114,10 +125,9 @@ const MapCard = ({ map, userId, onSelect, onDelete, onEdit }) => {
         </div>
       </div>
 
-      {/* Модальное окно для полного описания */}
       {showFullDescription && map.description && (
         <div className="description-modal-overlay" onClick={handleCloseDescription}>
-          <div className="description-modal" onClick={e => e.stopPropagation()}>
+          <div className="description-modal" onClick={(e) => e.stopPropagation()}>
             <div className="description-modal-header">
               <h3>{map.title}</h3>
               <button className="close-btn" onClick={handleCloseDescription}>

@@ -7,6 +7,11 @@ export const questionsService = {
     return response.data;
   },
 
+  async getLatestAttempt(nodeId) {
+    const response = await api.get(`/questions/node/${nodeId}/latest-attempt`);
+    return response.data;
+  },
+
   // Создать вопрос
   async create(data) {
     const response = await api.post('/questions', data);

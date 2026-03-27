@@ -389,6 +389,12 @@
   justify-content: center;
 }
 
+.icon-preview-empty {
+  color: #95a5a6;
+  font-size: 20px;
+  line-height: 1;
+}
+
 .field-hint {
   display: block;
   margin-top: 4px;

@@ -4,7 +4,7 @@ import './MapFormModal.css';
 const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('code');
+  const [selectedIcon, setSelectedIcon] = useState('none');
 
   const icons = [
     { name: 'code', icon: 'code', label: 'Программирование' },
@@ -20,11 +20,11 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
       if (mode === 'edit' && map) {
         setTitle(map.title || '');
         setDescription(map.description || '');
-        setSelectedIcon(map.emoji || 'code');
+        setSelectedIcon(map.emoji || 'none');
       } else {
         setTitle('');
         setDescription('');
-        setSelectedIcon('code');
+        setSelectedIcon('none');
       }
     }
   }, [isOpen, mode, map]);
@@ -32,9 +32,9 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (title.trim()) {
-      onSave({ 
+      onSave({
         id: map?.id,
-        title: title.trim(), 
+        title: title.trim(),
         description: description.trim(),
         emoji: selectedIcon === 'none' ? null : selectedIcon
       });
@@ -45,7 +45,7 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="map-form-modal" onClick={e => e.stopPropagation()}>
+      <div className="map-form-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>{mode === 'create' ? 'Новая карта' : 'Редактирование'}</h2>
           <button className="close-btn" onClick={onClose}>
@@ -82,12 +82,12 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
             <div className="icon-selector">
               <label>Тематика</label>
               <div className="icon-grid">
-                {icons.map(item => (
+                {icons.map((item) => (
                   <button
                     key={item.name}
                     type="button"
-                    className={`icon-btn ${selectedIcon === item.icon ? 'active' : ''}`}
-                    onClick={() => setSelectedIcon(item.icon)}
+                    className={`icon-btn ${selectedIcon === item.name ? 'active' : ''}`}
+                    onClick={() => setSelectedIcon(item.name)}
                     title={item.label}
                   >
                     <span className="material-icons">{item.icon}</span>
@@ -101,8 +101,8 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
             <button type="button" className="cancel-btn" onClick={onClose}>
               Отмена
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="save-btn"
               disabled={!title.trim()}
             >

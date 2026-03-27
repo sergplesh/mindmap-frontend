@@ -1,6 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { customTypesService } from '../services/customTypesService';
 import './TypeManager.css';
+
+const NODE_ICON_OPTIONS = [
+  { value: '', label: 'Без иконки' },
+  { value: 'psychology', label: 'Психология' },
+  { value: 'description', label: 'Документ' },
+  { value: 'functions', label: 'Формула' },
+  { value: 'route', label: 'Маршрут' },
+  { value: 'code', label: 'Код' },
+  { value: 'link', label: 'Ссылка' },
+  { value: 'school', label: 'Обучение' },
+  { value: 'science', label: 'Наука' },
+  { value: 'lightbulb', label: 'Идея' },
+  { value: 'article', label: 'Статья' },
+  { value: 'menu_book', label: 'Книга' },
+  { value: 'star', label: 'Звезда' },
+  { value: 'calculate', label: 'Теорема' }
+];
 
 function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
   const [systemTypes, setSystemTypes] = useState([]);
@@ -155,11 +172,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
 
   const templates = isNodeCategory ? nodeTemplates : edgeTemplates;
 
-  useEffect(() => {
-    loadTypes();
-  }, [mapId, category]);
-
-  const loadTypes = async () => {
+  const loadTypes = useCallback(async () => {
     try {
       const data = await customTypesService.getTypes(mapId, category);
       setSystemTypes(data.system);
@@ -168,7 +181,11 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
       console.error('Ошибка загрузки типов:', error);
       setError('Не удалось загрузить типы');
     }
-  };
+  }, [category, mapId]);
+
+  useEffect(() => {
+    loadTypes();
+  }, [loadTypes]);
 
   const handleCreateType = async () => {
     if (!newType.name.trim()) {
@@ -182,6 +199,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
     try {
       const typeData = {
         ...newType,
+        icon: newType.icon || null,
         customFields: newType.customFields.map(field => ({
           ...field,
           options: field.options ? field.options.split(',').map(o => o.trim()) : undefined
@@ -463,23 +481,26 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
           </div>
           
           <div className="form-group">
-            <label>Иконка (material icon name)</label>
+            <label>Иконка</label>
             <div className="icon-input-group">
-              <input
-                type="text"
-                value={newType.icon}
-                onChange={(e) => setNewType({...newType, icon: e.target.value})}
-                placeholder="psychology, code, functions, etc."
-              />
-              {newType.icon && (
-                <span className="icon-preview">
+              <select
+                value={newType.icon || ''}
+                onChange={(e) => setNewType({ ...newType, icon: e.target.value })}
+              >
+                {NODE_ICON_OPTIONS.map((iconOption) => (
+                  <option key={iconOption.value || 'none'} value={iconOption.value}>
+                    {iconOption.label}
+                  </option>
+                ))}
+              </select>
+              <span className="icon-preview">
+                {newType.icon ? (
                   <span className="material-icons">{newType.icon}</span>
-                </span>
-              )}
+                ) : (
+                  <span className="icon-preview-empty">-</span>
+                )}
+              </span>
             </div>
-            <small className="field-hint">
-              Доступные иконки: psychology, description, functions, route, code, link, school, science, etc.
-            </small>
           </div>
 
           {/* Кастомные поля */}

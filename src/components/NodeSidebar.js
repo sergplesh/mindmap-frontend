@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { nodesService } from '../services/nodesService';
 import { questionsService } from '../services/questionsService';
 import { customTypesService } from '../services/customTypesService';
@@ -40,13 +40,31 @@ function NodeSidebar({
   const titleInputRef = useRef(null);
 
   const isLearner = userRole === 'learner';
-  const isValidNodeId = (value) => (
+  const isValidNodeId = useCallback((value) => (
     value !== undefined &&
     value !== null &&
     (typeof value === 'number' || (typeof value === 'string' && /^\d+$/.test(value)))
-  );
+  ), []);
   const isRootNode = (initialNode?.level ?? node?.level) === 0;
   const canDeleteNode = isOwner && !isRootNode && isValidNodeId(node?.id) && !saving;
+
+  const loadTypeDetails = useCallback(async (typeId, isCustom) => {
+    try {
+      if (isCustom) {
+        if (!node?.mapId) {
+          console.warn('mapId не найден, пропускаем загрузку деталей типа');
+          return;
+        }
+        const typeDetails = await customTypesService.getTypeDetails(node.mapId, 'node', typeId);
+        setSelectedTypeDetails(typeDetails);
+      } else {
+        const systemType = systemNodeTypes.find((type) => type.id === typeId);
+        setSelectedTypeDetails(systemType);
+      }
+    } catch (loadError) {
+      console.error('Ошибка загрузки деталей типа:', loadError);
+    }
+  }, [node?.mapId, systemNodeTypes]);
 
   useEffect(() => {
     const loadNodeData = async () => {
@@ -105,7 +123,7 @@ function NodeSidebar({
     };
 
     loadNodeData();
-  }, [initialNode?.id]);
+  }, [initialNode, isValidNodeId, loadTypeDetails]);
 
   useEffect(() => {
     if (!initialNode) return;
@@ -139,29 +157,12 @@ function NodeSidebar({
       setCustomFields(initialNode.customFields);
     }
   }, [
+    initialNode,
     initialNode?.id,
     initialNode?.title,
     initialNode?.description,
     initialNode?.customFields
   ]);
-
-  const loadTypeDetails = async (typeId, isCustom) => {
-    try {
-      if (isCustom) {
-        if (!node?.mapId) {
-          console.warn('mapId не найден, пропускаем загрузку деталей типа');
-          return;
-        }
-        const typeDetails = await customTypesService.getTypeDetails(node.mapId, 'node', typeId);
-        setSelectedTypeDetails(typeDetails);
-      } else {
-        const systemType = systemNodeTypes.find((type) => type.id === typeId);
-        setSelectedTypeDetails(systemType);
-      }
-    } catch (loadError) {
-      console.error('Ошибка загрузки деталей типа:', loadError);
-    }
-  };
 
   useEffect(() => {
     if (startEditing && titleInputRef.current && !loading) {
@@ -170,7 +171,7 @@ function NodeSidebar({
     }
   }, [startEditing, loading]);
 
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     if (!node?.id || !isValidNodeId(node.id)) {
       setQuestions([]);
       return;
@@ -184,11 +185,11 @@ function NodeSidebar({
     } finally {
       setLoadingQuestions(false);
     }
-  };
+  }, [node?.id, isValidNodeId]);
 
   useEffect(() => {
     loadQuestions();
-  }, [node?.id]);
+  }, [loadQuestions]);
 
   useEffect(() => {
     const loadTypeOnSelection = async () => {
@@ -208,7 +209,7 @@ function NodeSidebar({
     };
 
     loadTypeOnSelection();
-  }, [typeSelection]);
+  }, [typeSelection, loadTypeDetails]);
 
   const typeLabel = useMemo(() => {
     if (node?.customTypeId) {
@@ -786,9 +787,15 @@ function NodeSidebar({
           isOpen={showQuestionManager}
           onClose={() => setShowQuestionManager(false)}
           node={node}
-          onQuestionsUpdate={() => {
-            loadQuestions();
-            if (onRefreshMap) onRefreshMap({ preserveView: true });
+          onQuestionsUpdate={async () => {
+            await loadQuestions();
+            if (onRefreshMap) {
+              await onRefreshMap({
+                preserveView: true,
+                keepSidebarOpen: true,
+                nodeId: node?.id
+              });
+            }
           }}
         />
       )}
