@@ -1,11 +1,12 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { questionsService } from '../services/questionsService';
-import { usePagination } from '../hooks/usePagination';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuestionsService } from '../hooks/useQuestionsService';
 import './QuestionManagerModal.css';
 
 const buildEmptyOption = () => ({ id: null, text: '', isCorrect: false });
+const QUESTIONS_PAGE_SIZE = 3;
 
 const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
+  const questionsService = useQuestionsService();
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -16,14 +17,23 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     options: [buildEmptyOption(), buildEmptyOption()]
   });
   const [error, setError] = useState('');
-  const {
-    currentPage,
-    totalPages,
-    pageItems: visibleQuestions,
-    reset: resetPagination,
-    goNext,
-    goPrev
-  } = usePagination(questions, 3);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PAGE_SIZE));
+  const visibleQuestions = useMemo(() => {
+    const startIndex = (currentPage - 1) * QUESTIONS_PAGE_SIZE;
+    return questions.slice(startIndex, startIndex + QUESTIONS_PAGE_SIZE);
+  }, [currentPage, questions]);
+  const resetPagination = useCallback(() => setCurrentPage(1), []);
+  const goNext = useCallback(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+  }, [totalPages]);
+  const goPrev = useCallback(() => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage, totalPages));
+  }, [totalPages]);
 
   const loadQuestions = useCallback(async () => {
     setLoading(true);
@@ -35,7 +45,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
     } finally {
       setLoading(false);
     }
-  }, [node?.id]);
+  }, [node?.id, questionsService]);
 
   useEffect(() => {
     if (isOpen && node?.id) {
@@ -247,7 +257,7 @@ const QuestionManagerModal = ({ isOpen, onClose, node, onQuestionsUpdate }) => {
                         {visibleQuestions.map((question, idx) => (
                         <div key={question.id} className="question-item">
                           <div className="question-item-header">
-                          <span className="question-number">Вопрос {(currentPage - 1) * 3 + idx + 1}</span>
+                          <span className="question-number">Вопрос {(currentPage - 1) * QUESTIONS_PAGE_SIZE + idx + 1}</span>
                             <span className="question-type-badge">
                               {question.questionType === 'single_choice' ? 'Один ответ' : 'Несколько ответов'}
                             </span>

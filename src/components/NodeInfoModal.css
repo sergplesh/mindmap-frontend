@@ -95,6 +95,32 @@
   border: 1px solid #e9ecef;
 }
 
+.expandable-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.expandable-text-content {
+  white-space: pre-wrap;
+}
+
+.expandable-text-toggle {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  color: #3498db;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0;
+  cursor: pointer;
+}
+
+.expandable-text-toggle:hover {
+  color: #2980b9;
+  text-decoration: underline;
+}
+
 .type-badge {
   display: inline-block;
   padding: 6px 12px;

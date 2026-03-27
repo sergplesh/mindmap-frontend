@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MindElixir from 'mind-elixir';
 import '/node_modules/mind-elixir/dist/MindElixir.css';
-import { mapsService } from '../services/mapsService';
-import { nodesService } from '../services/nodesService';
-import { edgesService } from '../services/edgesService';
-import { customTypesService } from '../services/customTypesService';
+import { useMapsService } from '../hooks/useMapsService';
+import { useNodesService } from '../hooks/useNodesService';
+import { useEdgesService } from '../hooks/useEdgesService';
+import { useCustomTypesService } from '../hooks/useCustomTypesService';
 import { NODE_TYPES } from '../constants';
 import NodeSidebar from './NodeSidebar';
 import AccessManager from './AccessManager';
@@ -493,6 +493,10 @@ const ensureRootChildrenDirections = (rootNode) => {
 };
 
 function MapEditor({ map, userId, onClose }) {
+  const mapsService = useMapsService();
+  const nodesService = useNodesService();
+  const edgesService = useEdgesService();
+  const customTypesService = useCustomTypesService();
   const containerRef = useRef(null);
   const mindMapRef = useRef(null);
   const mindIdToNodeIdRef = useRef(new Map());
@@ -643,7 +647,7 @@ function MapEditor({ map, userId, onClose }) {
     } finally {
       setAreNodeTypesLoaded(true);
     }
-  }, [map.id]);
+  }, [customTypesService, map.id]);
 
   useEffect(() => {
     loadNodeTypes();
@@ -996,7 +1000,7 @@ function MapEditor({ map, userId, onClose }) {
         isInitializingRef.current = false;
       }, 0);
     }
-  }, [map.id, map.title, map.ownerId, userId, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches, resetConnectionDraft]);
+  }, [map.id, map.title, map.ownerId, userId, mapsService, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches, resetConnectionDraft]);
 
   const handleTypesChange = useCallback(async (category) => {
     if (category === 'node') {
@@ -1377,7 +1381,7 @@ function MapEditor({ map, userId, onClose }) {
     mind.clickHandlerOptions = listenerOptions;
     
     console.log('Обработчики событий настроены');
-  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, map.id, resetConnectionDraft, syncSelectedNodeTitle, updateConnectionDraft]);
+  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, map.id, nodesService, resetConnectionDraft, syncSelectedNodeTitle, updateConnectionDraft]);
 
   useEffect(() => {
     setupEventListenersRef.current = setupEventListeners;
@@ -1591,7 +1595,7 @@ function MapEditor({ map, userId, onClose }) {
         }, 0);
       }
     }
-  }, [isOwner, map.id, allNodes, allEdges, commitPendingInlineEdit]);
+  }, [isOwner, map.id, allNodes, allEdges, commitPendingInlineEdit, edgesService, nodesService]);
 
   useEffect(() => {
     saveChangesRef.current = saveChanges;
@@ -1614,7 +1618,7 @@ function MapEditor({ map, userId, onClose }) {
     } catch (error) {
       console.error('Ошибка загрузки узла после викторины:', error);
     }
-  }, [loadMap]);
+  }, [loadMap, nodesService]);
 
   const handleStartQuizForLockedNode = useCallback(() => {
     if (!lockedNodePromptData) return;
@@ -1765,7 +1769,7 @@ function MapEditor({ map, userId, onClose }) {
     } finally {
       setIsSaving(false);
     }
-  }, [selectedNode, allNodes, allEdges, loadMap]);
+  }, [selectedNode, allNodes, allEdges, loadMap, edgesService, nodesService]);
 
   // Обновление узла после редактирования
   const handleNodeUpdate = useCallback(async (options = {}) => {
@@ -1801,7 +1805,7 @@ function MapEditor({ map, userId, onClose }) {
     }
 
     setSelectedNode(null);
-  }, [loadMap, selectedNode?.id, waitForSaveQueue]);
+  }, [loadMap, nodesService, selectedNode?.id, waitForSaveQueue]);
 
   const handleEnsureNodeSaved = useCallback(async (nodeLike) => {
     const nodeId = nodeLike?.id;
@@ -1836,7 +1840,7 @@ function MapEditor({ map, userId, onClose }) {
         mapId: map.id
       };
     }
-  }, [map.id, waitForSaveQueue]);
+  }, [map.id, nodesService, waitForSaveQueue]);
 
   // Экспорт в PNG
   const handleToggleConnectionMode = useCallback(() => {

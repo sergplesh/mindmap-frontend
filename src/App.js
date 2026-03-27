@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { authService } from './services/authService';
+import { useAuthService } from './hooks/useAuthService';
 import Navigation from './components/Navigation';
 import MapsPage from './pages/MapsPage';
 import MapEditor from './components/MapEditor';
 import './App.css';
 
+const SELECTED_MAP_STORAGE_KEY = 'mindmap:selectedMap';
+const AUTH_EXPIRED_EVENT = 'mindmap:auth-expired';
+
 function App() {
+  const authService = useAuthService();
   const [user, setUser] = useState(null);
   const [currentPage, setCurrentPage] = useState('owned');
   const [selectedMap, setSelectedMap] = useState(null);
@@ -17,7 +21,31 @@ function App() {
     const currentUser = authService.getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      const storedMap = sessionStorage.getItem(SELECTED_MAP_STORAGE_KEY);
+      if (storedMap) {
+        try {
+          setSelectedMap(JSON.parse(storedMap));
+        } catch {
+          sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
+        }
+      }
+    } else {
+      sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
     }
+  }, [authService]);
+
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      setUser(null);
+      setSelectedMap(null);
+      setCurrentPage('owned');
+      sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => {
+      window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    };
   }, []);
 
   const handleAuth = async (e) => {
@@ -57,19 +85,23 @@ function App() {
     setUser(null);
     setSelectedMap(null);
     setCurrentPage('owned');
+    sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
   };
 
   const handleNavigate = (page) => {
     setCurrentPage(page);
     setSelectedMap(null);
+    sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
   };
 
   const handleSelectMap = (map) => {
     setSelectedMap(map);
+    sessionStorage.setItem(SELECTED_MAP_STORAGE_KEY, JSON.stringify(map));
   };
 
   const handleBackToMaps = () => {
     setSelectedMap(null);
+    sessionStorage.removeItem(SELECTED_MAP_STORAGE_KEY);
   };
 
   if (!user) {

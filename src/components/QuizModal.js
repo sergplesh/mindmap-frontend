@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { questionsService } from '../services/questionsService';
-import { usePagination } from '../hooks/usePagination';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuestionsService } from '../hooks/useQuestionsService';
 import './QuizModal.css';
+
+const QUESTIONS_PAGE_SIZE = 3;
+const ATTEMPTS_PAGE_SIZE = 3;
 
 const formatAttemptDate = (value) => {
   if (!value) return '—';
@@ -41,6 +43,7 @@ const AttemptResults = ({ attempt }) => {
 };
 
 const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
+  const questionsService = useQuestionsService();
   const [questions, setQuestions] = useState([]);
   const [answers, setAnswers] = useState({});
   const [loading, setLoading] = useState(false);
@@ -50,22 +53,41 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
   const [latestAttempt, setLatestAttempt] = useState(null);
   const [loadingLatestAttempt, setLoadingLatestAttempt] = useState(false);
   const [attempts, setAttempts] = useState(0);
-  const {
-    currentPage,
-    totalPages,
-    pageItems: visibleQuestions,
-    reset: resetQuestionsPagination,
-    goNext,
-    goPrev
-  } = usePagination(questions, 3);
-  const {
-    currentPage: latestAttemptPage,
-    totalPages: latestAttemptTotalPages,
-    pageItems: latestAttemptResults,
-    reset: resetAttemptPagination,
-    goNext: goNextAttemptPage,
-    goPrev: goPrevAttemptPage
-  } = usePagination(latestAttempt?.results || [], 3);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [latestAttemptPage, setLatestAttemptPage] = useState(1);
+  const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PAGE_SIZE));
+  const latestAttemptEntries = useMemo(() => latestAttempt?.results ?? [], [latestAttempt]);
+  const latestAttemptTotalPages = Math.max(1, Math.ceil(latestAttemptEntries.length / ATTEMPTS_PAGE_SIZE));
+  const visibleQuestions = useMemo(() => {
+    const startIndex = (currentPage - 1) * QUESTIONS_PAGE_SIZE;
+    return questions.slice(startIndex, startIndex + QUESTIONS_PAGE_SIZE);
+  }, [currentPage, questions]);
+  const latestAttemptResults = useMemo(() => {
+    const startIndex = (latestAttemptPage - 1) * ATTEMPTS_PAGE_SIZE;
+    return latestAttemptEntries.slice(startIndex, startIndex + ATTEMPTS_PAGE_SIZE);
+  }, [latestAttemptEntries, latestAttemptPage]);
+  const resetQuestionsPagination = useCallback(() => setCurrentPage(1), []);
+  const resetAttemptPagination = useCallback(() => setLatestAttemptPage(1), []);
+  const goNext = useCallback(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+  }, [totalPages]);
+  const goPrev = useCallback(() => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  }, []);
+  const goNextAttemptPage = useCallback(() => {
+    setLatestAttemptPage((prevPage) => Math.min(prevPage + 1, latestAttemptTotalPages));
+  }, [latestAttemptTotalPages]);
+  const goPrevAttemptPage = useCallback(() => {
+    setLatestAttemptPage((prevPage) => Math.max(prevPage - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage, totalPages));
+  }, [totalPages]);
+
+  useEffect(() => {
+    setLatestAttemptPage((prevPage) => Math.min(prevPage, latestAttemptTotalPages));
+  }, [latestAttemptTotalPages]);
 
   useEffect(() => {
     if (!isOpen || !node?.id) {
@@ -111,9 +133,9 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
     return () => {
       isActive = false;
     };
-  }, [isOpen, node?.id, resetAttemptPagination, resetQuestionsPagination]);
+  }, [isOpen, node?.id, questionsService, resetAttemptPagination, resetQuestionsPagination]);
 
-  const pageStart = (currentPage - 1) * 3;
+  const pageStart = (currentPage - 1) * QUESTIONS_PAGE_SIZE;
 
   const handleAnswerChange = (questionId, value, isMultiple = false) => {
     setAnswers(prev => {

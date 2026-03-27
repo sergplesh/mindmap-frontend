@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { accessService } from '../services/accessService';
-import { authService } from '../services/authService';
+import { useAccessService } from '../hooks/useAccessService';
+import { useAuthService } from '../hooks/useAuthService';
 import BulkImportModal from './BulkImportModal';
 import './AccessManager.css';
 
 const AccessManager = ({ mapId, isOwner, onClose }) => {
+  const accessService = useAccessService();
+  const authService = useAuthService();
   const [users, setUsers] = useState([]);
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteRole, setInviteRole] = useState('observer');
@@ -66,7 +68,7 @@ const AccessManager = ({ mapId, isOwner, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [mapId]);
+  }, [accessService, mapId]);
 
   useEffect(() => {
     if (isOwner) {

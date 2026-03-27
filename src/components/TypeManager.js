@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { customTypesService } from '../services/customTypesService';
+import { useCustomTypesService } from '../hooks/useCustomTypesService';
 import './TypeManager.css';
 
 const NODE_ICON_OPTIONS = [
@@ -20,6 +20,7 @@ const NODE_ICON_OPTIONS = [
 ];
 
 function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
+  const customTypesService = useCustomTypesService();
   const [systemTypes, setSystemTypes] = useState([]);
   const [customTypes, setCustomTypes] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -181,7 +182,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
       console.error('Ошибка загрузки типов:', error);
       setError('Не удалось загрузить типы');
     }
-  }, [category, mapId]);
+  }, [category, customTypesService, mapId]);
 
   useEffect(() => {
     loadTypes();

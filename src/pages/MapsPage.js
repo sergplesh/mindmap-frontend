@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import MapCard from '../components/MapCard';
 import MapFormModal from '../components/MapFormModal';
-import { mapsService } from '../services/mapsService';
+import { useMapsService } from '../hooks/useMapsService';
 import './MapsPage.css';
 
 const PAGE_CONFIG = {
@@ -29,6 +29,7 @@ const PAGE_CONFIG = {
 };
 
 const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
+  const mapsService = useMapsService();
   const [maps, setMaps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showFormModal, setShowFormModal] = useState(false);
@@ -36,22 +37,21 @@ const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
   const [editingMap, setEditingMap] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('updated');
-
-  useEffect(() => {
-    loadMaps();
-  }, []);
-
-  const loadMaps = async () => {
+  const loadMaps = useCallback(async () => {
     setLoading(true);
     try {
       const data = await mapsService.getAll();
       setMaps(data);
     } catch (error) {
-      console.error('Ошибка загрузки карт:', error);
+      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РєР°СЂС‚:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [mapsService]);
+
+  useEffect(() => {
+    loadMaps();
+  }, [loadMaps]);
 
   const handleCreateMap = async (mapData) => {
     try {

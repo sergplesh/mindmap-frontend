@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
-import { accessService } from '../services/accessService';
-import { userService } from '../services/userService';
+import { useAccessService } from '../hooks/useAccessService';
+import { useUserService } from '../hooks/useUserService';
 import './BulkImportModal.css';
 
 const getRoleLabel = role =>
@@ -18,6 +18,8 @@ const getInviteReadyMessage = role =>
   `Готов к приглашению как ${getRoleLabel(role).toLowerCase()}`;
 
 const BulkImportModal = ({ isOpen, onClose, onImport, mapId, isOwner }) => {
+  const accessService = useAccessService();
+  const userService = useUserService();
   const [previewData, setPreviewData] = useState([]);
   const [selectedRole, setSelectedRole] = useState('learner');
   const [loading, setLoading] = useState(false);

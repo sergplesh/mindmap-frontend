@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { nodesService } from '../services/nodesService';
-import { questionsService } from '../services/questionsService';
-import { customTypesService } from '../services/customTypesService';
+import { useNodesService } from '../hooks/useNodesService';
+import { useQuestionsService } from '../hooks/useQuestionsService';
+import { useCustomTypesService } from '../hooks/useCustomTypesService';
 import QuestionManagerModal from './QuestionManagerModal';
 import './NodeSidebar.css';
 
@@ -21,6 +21,9 @@ function NodeSidebar({
   isDraggable,
   onAddSubtopic,
 }) {
+  const nodesService = useNodesService();
+  const questionsService = useQuestionsService();
+  const customTypesService = useCustomTypesService();
   const [node, setNode] = useState(initialNode);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -64,7 +67,7 @@ function NodeSidebar({
     } catch (loadError) {
       console.error('Ошибка загрузки деталей типа:', loadError);
     }
-  }, [node?.mapId, systemNodeTypes]);
+  }, [customTypesService, node?.mapId, systemNodeTypes]);
 
   useEffect(() => {
     const loadNodeData = async () => {
@@ -123,7 +126,7 @@ function NodeSidebar({
     };
 
     loadNodeData();
-  }, [initialNode, isValidNodeId, loadTypeDetails]);
+  }, [initialNode, isValidNodeId, loadTypeDetails, nodesService]);
 
   useEffect(() => {
     if (!initialNode) return;
@@ -185,7 +188,7 @@ function NodeSidebar({
     } finally {
       setLoadingQuestions(false);
     }
-  }, [node?.id, isValidNodeId]);
+  }, [isValidNodeId, node?.id, questionsService]);
 
   useEffect(() => {
     loadQuestions();

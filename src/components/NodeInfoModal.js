@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { questionsService } from '../services/questionsService';
-import { nodesService } from '../services/nodesService';
-import { usePagination } from '../hooks/usePagination';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuestionsService } from '../hooks/useQuestionsService';
+import { useNodesService } from '../hooks/useNodesService';
 import './NodeInfoModal.css';
 
 const formatAttemptDate = (value) => {
@@ -65,18 +64,82 @@ const normalizeNodeInfo = (source, fallback = {}) => ({
   customFields: source?.customFields ?? source?.CustomFields ?? fallback?.customFields ?? null
 });
 
+const ATTEMPTS_PAGE_SIZE = 3;
+const TITLE_MAX_LENGTH = 120;
+const FIELD_MAX_LENGTH = 180;
+
+const toDisplayText = (value) => {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string') return value.trim();
+  if (typeof value === 'object') {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+};
+
+const ExpandableText = ({ value, maxLength = FIELD_MAX_LENGTH, className = '', placeholder = '—' }) => {
+  const text = useMemo(() => toDisplayText(value), [value]);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    setExpanded(false);
+  }, [text, maxLength]);
+
+  if (!text) {
+    return <span className={className}>{placeholder}</span>;
+  }
+
+  const isLong = text.length > maxLength;
+  const visibleText = isLong && !expanded
+    ? `${text.slice(0, maxLength)}...`
+    : text;
+
+  return (
+    <div className={`expandable-text ${className}`.trim()}>
+      <span className="expandable-text-content">{visibleText}</span>
+      {isLong && (
+        <button
+          type="button"
+          className="expandable-text-toggle"
+          onClick={() => setExpanded((prev) => !prev)}
+        >
+          {expanded ? 'Скрыть' : 'Подробнее'}
+        </button>
+      )}
+    </div>
+  );
+};
+
 const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
+  const questionsService = useQuestionsService();
+  const nodesService = useNodesService();
   const [resolvedNode, setResolvedNode] = useState(() => normalizeNodeInfo(node));
   const [latestAttempt, setLatestAttempt] = useState(null);
   const [loadingAttempt, setLoadingAttempt] = useState(false);
-  const {
-    currentPage,
-    totalPages,
-    pageItems: pagedAttemptResults,
-    reset: resetAttemptPagination,
-    goNext,
-    goPrev
-  } = usePagination(latestAttempt?.results || [], 3);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const attemptResults = useMemo(() => latestAttempt?.results ?? [], [latestAttempt]);
+  const totalPages = Math.max(1, Math.ceil(attemptResults.length / ATTEMPTS_PAGE_SIZE));
+  const pagedAttemptResults = useMemo(() => {
+    const startIndex = (currentPage - 1) * ATTEMPTS_PAGE_SIZE;
+    return attemptResults.slice(startIndex, startIndex + ATTEMPTS_PAGE_SIZE);
+  }, [attemptResults, currentPage]);
+
+  const resetAttemptPagination = useCallback(() => setCurrentPage(1), []);
+  const goNext = useCallback(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
+  }, [totalPages]);
+  const goPrev = useCallback(() => {
+    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage((prevPage) => Math.min(prevPage, totalPages));
+  }, [totalPages]);
 
   useEffect(() => {
     setResolvedNode(normalizeNodeInfo(node));
@@ -107,7 +170,7 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
     return () => {
       isActive = false;
     };
-  }, [isOpen, node]);
+  }, [isOpen, node, nodesService]);
 
   useEffect(() => {
     if (!isOpen || !node?.id || userRole !== 'learner' || !resolvedNode?.hasQuestions) {
@@ -144,7 +207,7 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
     return () => {
       isActive = false;
     };
-  }, [isOpen, node?.id, resolvedNode?.hasQuestions, resetAttemptPagination, userRole]);
+  }, [isOpen, node?.id, questionsService, resolvedNode?.hasQuestions, resetAttemptPagination, userRole]);
 
   if (!isOpen || !resolvedNode) return null;
 
@@ -152,7 +215,7 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
 
   return (
     <div className="node-info-overlay" onClick={onClose}>
-      <div className="node-info-modal" onClick={e => e.stopPropagation()}>
+      <div className="node-info-modal" onClick={(e) => e.stopPropagation()}>
         <div className="node-info-header" style={{ backgroundColor: getTypeColor() }}>
           <h3>
             <span className="material-icons">info</span>
@@ -166,12 +229,20 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
         <div className="node-info-content">
           <div className="info-section">
             <label>Название</label>
-            <div className="info-value">{resolvedNode.title || '—'}</div>
+            <ExpandableText
+              value={resolvedNode.title}
+              maxLength={TITLE_MAX_LENGTH}
+              className="info-value"
+            />
           </div>
 
           <div className="info-section">
             <label>Описание</label>
-            <div className="info-value description">{resolvedNode.description || '—'}</div>
+            <ExpandableText
+              value={resolvedNode.description}
+              maxLength={FIELD_MAX_LENGTH}
+              className="info-value description"
+            />
           </div>
 
           <div className="info-section">
@@ -193,7 +264,11 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
                 {Object.entries(resolvedNode.customFields).map(([key, value]) => (
                   <div key={key} className="custom-field">
                     <span className="field-name">{key}:</span>
-                    <span className="field-value">{value || '—'}</span>
+                    <ExpandableText
+                      value={value}
+                      maxLength={FIELD_MAX_LENGTH}
+                      className="field-value"
+                    />
                   </div>
                 ))}
               </div>
