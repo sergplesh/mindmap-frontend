@@ -37,6 +37,7 @@ const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
   const [editingMap, setEditingMap] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('updated');
+  const [sortDirection, setSortDirection] = useState('desc');
   const loadMaps = useCallback(async () => {
     setLoading(true);
     try {
@@ -119,14 +120,16 @@ const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
   );
 
   const sortedMaps = [...filteredMaps].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1;
+
     switch (sortBy) {
       case 'created':
-        return new Date(b.createdAt) - new Date(a.createdAt);
+        return (new Date(a.createdAt) - new Date(b.createdAt)) * direction;
       case 'title':
-        return a.title.localeCompare(b.title);
+        return a.title.localeCompare(b.title) * direction;
       case 'updated':
       default:
-        return new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt);
+        return (new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt)) * direction;
     }
   });
 
@@ -199,6 +202,17 @@ const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
             <option value="created">По дате создания</option>
             <option value="title">По названию</option>
           </select>
+          <button
+            type="button"
+            className="sort-direction-btn"
+            onClick={() => setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            title={sortDirection === 'asc' ? 'Sort ascending' : 'Sort descending'}
+            aria-label={sortDirection === 'asc' ? 'Sort ascending' : 'Sort descending'}
+          >
+            <span className="material-icons">
+              {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+            </span>
+          </button>
         </div>
       </div>
 
