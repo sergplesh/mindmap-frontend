@@ -1178,7 +1178,7 @@ function MapEditor({ map, userId, onClose }) {
             updateConnectionDraft({
               active: true,
               sourceMindId: String(foundNode.id),
-              sourceTitle: foundNode.topic || 'РЈР·РµР»'
+              sourceTitle: foundNode.topic || 'Узел'
             });
             setSelectedNode(null);
             return;

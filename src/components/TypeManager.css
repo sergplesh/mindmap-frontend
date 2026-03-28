@@ -70,7 +70,7 @@
   max-height: calc(85vh - 80px);
 }
 
-/* РЎРµРєС†РёСЏ С‚РёРїРѕРІ */
+/* Секция типов */
 .types-section {
   margin-bottom: 32px;
 }
@@ -402,7 +402,7 @@
   color: #95a5a6;
 }
 
-/* РљР°СЃС‚РѕРјРЅС‹Рµ РїРѕР»СЏ */
+/* Кастомные поля */
 .custom-fields-section {
   margin-top: 20px;
   padding-top: 16px;

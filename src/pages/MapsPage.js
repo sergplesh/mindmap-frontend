@@ -44,7 +44,7 @@ const MapsPage = ({ userId, currentPage = 'owned', onSelectMap }) => {
       const data = await mapsService.getAll();
       setMaps(data);
     } catch (error) {
-      console.error('РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РєР°СЂС‚:', error);
+      console.error('Ошибка загрузки карт:', error);
     } finally {
       setLoading(false);
     }
