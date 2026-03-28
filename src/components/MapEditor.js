@@ -101,41 +101,6 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
   
   const visited = new Set();
   
-  const sortChildIds = (parentLevel, childIds) => {
-    const sortedChildIds = [...childIds];
-
-    sortedChildIds.sort((leftId, rightId) => {
-      const leftNode = nodeMap.get(String(leftId));
-      const rightNode = nodeMap.get(String(rightId));
-
-      if (!leftNode || !rightNode) {
-        return 0;
-      }
-
-      if (parentLevel === 0) {
-        const leftDirection = resolveStoredRootDirection(leftNode);
-        const rightDirection = resolveStoredRootDirection(rightNode);
-        const leftBucket = leftDirection === MindElixir.LEFT ? 0 : leftDirection === MindElixir.RIGHT ? 1 : 2;
-        const rightBucket = rightDirection === MindElixir.LEFT ? 0 : rightDirection === MindElixir.RIGHT ? 1 : 2;
-
-        if (leftBucket !== rightBucket) {
-          return leftBucket - rightBucket;
-        }
-      }
-
-      const leftOrder = Number.isFinite(leftNode.yPosition) ? leftNode.yPosition : Number.MAX_SAFE_INTEGER;
-      const rightOrder = Number.isFinite(rightNode.yPosition) ? rightNode.yPosition : Number.MAX_SAFE_INTEGER;
-
-      if (leftOrder !== rightOrder) {
-        return leftOrder - rightOrder;
-      }
-
-      return 0;
-    });
-
-    return sortedChildIds;
-  };
-  
   const buildNode = (nodeId, level = 0) => {
     const stringId = String(nodeId);
     
@@ -185,18 +150,16 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
       const isLocked = !isUnlocked;
       
       const shouldStopAtLockedQuiz = isLearner && isLocked && node.hasQuestions;
-      const childIds = shouldStopAtLockedQuiz ? [] : sortChildIds(level, childrenMap.get(stringId) || []);
+      const childIds = shouldStopAtLockedQuiz ? [] : (childrenMap.get(stringId) || []);
       const children = childIds
         .map(childId => buildNode(childId, level + 1))
         .filter(child => child !== null && child !== undefined);
-      const storedRootDirection = level === 1 ? resolveStoredRootDirection(node) : null;
     
     return {
       id: stringId,
       topic: node.title || 'Узел',
       children: children.length > 0 ? children : undefined,
       expanded: true,
-      ...(storedRootDirection !== null ? { direction: storedRootDirection } : {}),
       data: {
         description: node.description || '',
         typeId: node.typeId,
@@ -209,8 +172,6 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
           isUnlocked: isUnlocked,
           isVisible: node.isVisible !== false,
           level: level,
-          xPosition: node.xPosition ?? 0,
-          yPosition: node.yPosition ?? 0,
           originalId: node.id // Сохраняем оригинальный ID для обратной конвертации
         }
     };
@@ -287,7 +248,7 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
 
   const generateTempId = () => -(Date.now() + Math.floor(Math.random() * 10000));
 
-  const traverse = (node, parentId = null, level = 0, siblingIndex = 0) => {
+  const traverse = (node, parentId = null, level = 0) => {
     if (!node) return;
     // Пытаемся получить существующий ID из данных узла
     let nodeId;
@@ -323,15 +284,6 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
     }
     processedIds.add(nodeId);
     
-    const rootDirection = level === 1
-      ? node.direction
-      : null;
-    const xPosition = rootDirection === MindElixir.LEFT
-      ? -1
-      : rootDirection === MindElixir.RIGHT
-        ? 1
-        : 0;
-
     newNodes.push({
       id: nodeId,
       _mindId: mindId,
@@ -339,8 +291,6 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
       description: node.data?.description || '',
       typeId: node.data?.typeId,
       customTypeId: node.data?.customTypeId,
-      xPosition,
-      yPosition: siblingIndex,
       width: node.data?.width || 200,
       height: node.data?.height || 80,
       hasQuestions: node.data?.hasQuestions || false,
@@ -357,25 +307,8 @@ const convertFromMindElixirFormat = (mindData, existingNodes, existingEdges, min
     }
     
     if (node.children && node.children.length > 0) {
-      let leftIndex = 0;
-      let rightIndex = 0;
-
-      node.children.forEach((child, childIndex) => {
-        if (level === 0) {
-          if (child.direction === MindElixir.LEFT) {
-            traverse(child, nodeId, level + 1, leftIndex);
-            leftIndex += 1;
-            return;
-          }
-
-          if (child.direction === MindElixir.RIGHT) {
-            traverse(child, nodeId, level + 1, rightIndex);
-            rightIndex += 1;
-            return;
-          }
-        }
-
-        traverse(child, nodeId, level + 1, childIndex);
+      node.children.forEach((child) => {
+        traverse(child, nodeId, level + 1);
       });
     }
   };
@@ -458,13 +391,6 @@ const createMindElixirNode = (topic) => ({
   id: `tmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
   topic,
 });
-
-const resolveStoredRootDirection = (node) => {
-  if (typeof node?.xPosition !== 'number') return null;
-  if (node.xPosition < 0) return MindElixir.LEFT;
-  if (node.xPosition > 0) return MindElixir.RIGHT;
-  return null;
-};
 
 const ensureRootChildrenDirections = (rootNode) => {
   if (!rootNode?.children?.length) return false;
@@ -1432,8 +1358,6 @@ function MapEditor({ map, userId, onClose }) {
             description: node.description,
             typeId: node.typeId,
             customTypeId: node.customTypeId,
-            xPosition: node.xPosition,
-            yPosition: node.yPosition,
             width: node.width,
             height: node.height
           });

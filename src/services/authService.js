@@ -38,4 +38,4 @@ export const authService = {
   getToken() {
     return localStorage.getItem('token');
   }
-};//
+};

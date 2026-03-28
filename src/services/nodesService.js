@@ -14,11 +14,6 @@ export const nodesService = {
     return response.data;
   },
 
-  async updatePosition(id, x, y) {
-    const response = await api.patch(`/nodes/${id}/position`, { xPosition: x, yPosition: y });
-    return response.data;
-  },
-
   async delete(id) {
     const response = await api.delete(`/nodes/${id}`);
     return response.data;
