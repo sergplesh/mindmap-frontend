@@ -4,7 +4,8 @@ import './MapFormModal.css';
 const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('none');
+  const [selectedIcon, setSelectedIcon] = useState('code');
+  const [noIcon, setNoIcon] = useState(true);
 
   const icons = [
     { name: 'code', icon: 'code', label: 'Программирование' },
@@ -12,7 +13,6 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
     { name: 'palette', icon: 'palette', label: 'Дизайн' },
     { name: 'translate', icon: 'translate', label: 'Языки' },
     { name: 'science', icon: 'science', label: 'Наука' },
-    { name: 'none', icon: 'not_interested', label: 'Без иконки' }
   ];
 
   useEffect(() => {
@@ -20,11 +20,13 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
       if (mode === 'edit' && map) {
         setTitle(map.title || '');
         setDescription(map.description || '');
-        setSelectedIcon(map.emoji || 'none');
+        setNoIcon(!map.emoji);
+        setSelectedIcon(map.emoji || 'code');
       } else {
         setTitle('');
         setDescription('');
-        setSelectedIcon('none');
+        setNoIcon(true);
+        setSelectedIcon('code');
       }
     }
   }, [isOpen, mode, map]);
@@ -36,8 +38,16 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
         id: map?.id,
         title: title.trim(),
         description: description.trim(),
-        emoji: selectedIcon === 'none' ? null : selectedIcon
+        emoji: noIcon ? null : selectedIcon
       });
+    }
+  };
+
+  const handleNoIconChange = (e) => {
+    const checked = e.target.checked;
+    setNoIcon(checked);
+    if (!checked && !selectedIcon) {
+      setSelectedIcon('code');
     }
   };
 
@@ -79,22 +89,35 @@ const MapFormModal = ({ isOpen, onClose, onSave, map, mode = 'create' }) => {
               />
             </div>
 
-            <div className="icon-selector">
-              <label>Тематика</label>
-              <div className="icon-grid">
-                {icons.map((item) => (
-                  <button
-                    key={item.name}
-                    type="button"
-                    className={`icon-btn ${selectedIcon === item.name ? 'active' : ''}`}
-                    onClick={() => setSelectedIcon(item.name)}
-                    title={item.label}
-                  >
-                    <span className="material-icons">{item.icon}</span>
-                  </button>
-                ))}
-              </div>
+            <div className="icon-toggle">
+              <label className="icon-toggle-label">
+                <input
+                  type="checkbox"
+                  checked={noIcon}
+                  onChange={handleNoIconChange}
+                />
+                <span>Без иконки</span>
+              </label>
             </div>
+
+            {!noIcon && (
+              <div className="icon-selector">
+                <label>Тематика</label>
+                <div className="icon-grid">
+                  {icons.map((item) => (
+                    <button
+                      key={item.name}
+                      type="button"
+                      className={`icon-btn ${selectedIcon === item.name ? 'active' : ''}`}
+                      onClick={() => setSelectedIcon(item.name)}
+                      title={item.label}
+                    >
+                      <span className="material-icons">{item.icon}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="modal-footer">

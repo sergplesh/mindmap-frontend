@@ -32,7 +32,9 @@ const renderAttemptResults = (results) => {
           </div>
           <div className="attempt-result-meta">
             <span>Ваш ответ: {(result.selectedOptionTexts || []).join(', ') || '—'}</span>
-            <span>Правильный ответ: {(result.correctOptionTexts || []).join(', ') || '—'}</span>
+            {result.isCorrect && (
+              <span>Правильный ответ: {(result.correctOptionTexts || []).join(', ') || '—'}</span>
+            )}
           </div>
         </div>
       ))}
@@ -67,6 +69,14 @@ const normalizeNodeInfo = (source, fallback = {}) => ({
 const ATTEMPTS_PAGE_SIZE = 3;
 const TITLE_MAX_LENGTH = 120;
 const FIELD_MAX_LENGTH = 180;
+
+const normalizeTypeName = (typeName) => {
+  const value = typeof typeName === 'string' ? typeName.trim() : '';
+  if (!value || value === 'Неизвестно' || value === 'Unknown' || value === 'Без типа') {
+    return 'Нет типа';
+  }
+  return value;
+};
 
 const toDisplayText = (value) => {
   if (value === undefined || value === null) return '';
@@ -121,8 +131,9 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
   const [latestAttempt, setLatestAttempt] = useState(null);
   const [loadingAttempt, setLoadingAttempt] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const successfulLatestAttempt = latestAttempt?.isPassed ? latestAttempt : null;
 
-  const attemptResults = useMemo(() => latestAttempt?.results ?? [], [latestAttempt]);
+  const attemptResults = useMemo(() => successfulLatestAttempt?.results ?? [], [successfulLatestAttempt]);
   const totalPages = Math.max(1, Math.ceil(attemptResults.length / ATTEMPTS_PAGE_SIZE));
   const pagedAttemptResults = useMemo(() => {
     const startIndex = (currentPage - 1) * ATTEMPTS_PAGE_SIZE;
@@ -252,7 +263,7 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
                 className="type-badge"
                 style={{ backgroundColor: getTypeColor() }}
               >
-                {resolvedNode.typeName || 'Без типа'}
+                {normalizeTypeName(resolvedNode.typeName)}
               </span>
             </div>
           </div>
@@ -284,16 +295,16 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
 
           {userRole === 'learner' && resolvedNode.hasQuestions && (
             <div className="info-section">
-              <label>Последняя попытка</label>
+              <label>Последняя успешная попытка</label>
               {loadingAttempt ? (
                 <div className="attempt-placeholder">Загрузка результатов...</div>
-              ) : latestAttempt ? (
+              ) : successfulLatestAttempt ? (
                 <div className="attempt-card">
                   <div className="attempt-card-header">
-                    <span className={`attempt-status ${latestAttempt.isPassed ? 'passed' : 'failed'}`}>
-                      {latestAttempt.isPassed ? 'Тест пройден' : 'Тест не пройден'}
+                    <span className="attempt-status passed">
+                      Тест пройден
                     </span>
-                    <span className="attempt-date">{formatAttemptDate(latestAttempt.completedAt)}</span>
+                    <span className="attempt-date">{formatAttemptDate(successfulLatestAttempt.completedAt)}</span>
                   </div>
                   {renderAttemptResults(pagedAttemptResults)}
                   {totalPages > 1 && (
@@ -309,7 +320,7 @@ const NodeInfoModal = ({ isOpen, onClose, node, userRole }) => {
                   )}
                 </div>
               ) : (
-                <div className="attempt-placeholder">Попыток пока нет</div>
+                <div className="attempt-placeholder">Успешных попыток пока нет</div>
               )}
             </div>
           )}

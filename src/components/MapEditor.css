@@ -200,6 +200,72 @@
   position: relative;
 }
 
+.connection-type-dropdown {
+  position: relative;
+}
+
+.connection-type-menu {
+  position: absolute;
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  min-width: 230px;
+  background: #ffffff;
+  border: 1px solid #dbe4ee;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  padding: 6px;
+  z-index: 80;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.18s ease, visibility 0.18s ease;
+}
+
+.connection-type-dropdown:hover .connection-type-menu,
+.connection-type-dropdown:focus-within .connection-type-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.connection-type-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: #2c3e50;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.connection-type-item .material-icons {
+  font-size: 18px;
+  color: #4a5568;
+}
+
+.connection-type-item:hover {
+  background: #f0f7ff;
+  color: #1e6fb8;
+}
+
+.connection-type-item.selected {
+  background: #e8f4ff;
+  color: #1e6fb8;
+  font-weight: 600;
+}
+
+.connection-type-empty {
+  font-size: 12px;
+  color: #64748b;
+  padding: 10px;
+}
+
 .export-menu {
   position: absolute;
   top: 100%;
@@ -354,6 +420,46 @@
   font-size: 13px;
   z-index: 30;
   animation: fadeInOut 2s ease;
+}
+
+.load-error-card {
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.15);
+  padding: 20px;
+  width: min(480px, calc(100vw - 32px));
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.load-error-card .material-icons {
+  font-size: 30px;
+  color: #ef4444;
+}
+
+.load-error-card p {
+  margin: 0;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.retry-load-btn {
+  border: none;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 14px;
+}
+
+.retry-load-btn:hover {
+  background: #1d4ed8;
 }
 
 .locked-node-modal-overlay {

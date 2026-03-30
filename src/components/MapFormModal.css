@@ -385,3 +385,25 @@
     font-size: 24px;
   }
 }
+
+.icon-toggle {
+  margin-bottom: 14px;
+}
+
+.icon-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #1e293b;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.icon-toggle-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #3182ce;
+  cursor: pointer;
+}

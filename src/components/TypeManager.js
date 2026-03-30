@@ -21,7 +21,6 @@ const NODE_ICON_OPTIONS = [
 
 function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
   const customTypesService = useCustomTypesService();
-  const [systemTypes, setSystemTypes] = useState([]);
   const [customTypes, setCustomTypes] = useState([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingType, setEditingType] = useState(null);
@@ -31,6 +30,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
     shape: 'rect',
     style: 'solid',
     label: '',
+    isBidirectional: false,
     icon: '',
     size: 'medium',
     customFields: []
@@ -51,133 +51,10 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
   const isNodeCategory = category === 'node';
   
   // Шаблоны типов узлов
-  const nodeTemplates = [
-    {
-      id: 'concept',
-      name: 'Понятие',
-      color: '#3b82f6',
-      shape: 'rect',
-      icon: 'psychology',
-      description: 'Основное понятие темы',
-      customFields: [
-        { name: 'Определение', type: 'text', required: true },
-        { name: 'Примеры', type: 'text', required: false }
-      ]
-    },
-    {
-      id: 'definition',
-      name: 'Определение',
-      color: '#10b981',
-      shape: 'rounded',
-      icon: 'description',
-      description: 'Четкое определение термина',
-      customFields: [
-        { name: 'Формулировка', type: 'text', required: true },
-        { name: 'Ключевые слова', type: 'text', required: false }
-      ]
-    },
-    {
-      id: 'formula',
-      name: 'Формула',
-      color: '#ef4444',
-      shape: 'rect',
-      icon: 'functions',
-      description: 'Математическая формула',
-      customFields: [
-        { name: 'Формула (LaTeX)', type: 'text', required: true },
-        { name: 'Описание', type: 'text', required: true }
-      ]
-    },
-    {
-      id: 'algorithm',
-      name: 'Алгоритм',
-      color: '#f59e0b',
-      shape: 'diamond',
-      icon: 'route',
-      description: 'Последовательность действий',
-      customFields: [
-        { name: 'Входные данные', type: 'text', required: true },
-        { name: 'Выходные данные', type: 'text', required: true },
-        { name: 'Сложность', type: 'text', required: false }
-      ]
-    },
-    {
-      id: 'example',
-      name: 'Пример',
-      color: '#8b5cf6',
-      shape: 'rounded',
-      icon: 'code',
-      description: 'Практический пример',
-      customFields: [
-        { name: 'Код/Пример', type: 'textarea', required: true },
-        { name: 'Пояснение', type: 'text', required: false }
-      ]
-    },
-    {
-      id: 'resource',
-      name: 'Ресурс',
-      color: '#06b6d4',
-      shape: 'oval',
-      icon: 'link',
-      description: 'Внешний ресурс',
-      customFields: [
-        { name: 'URL', type: 'url', required: true },
-        { name: 'Тип ресурса', type: 'select', required: false, options: ['Статья', 'Видео', 'Книга', 'Курс'] }
-      ]
-    }
-  ];
-
-  // Шаблоны типов связей
-  const edgeTemplates = [
-    {
-      id: 'is_a',
-      name: 'является',
-      color: '#666666',
-      style: 'solid',
-      label: 'является',
-      description: 'Иерархическая связь'
-    },
-    {
-      id: 'depends_on',
-      name: 'зависит от',
-      color: '#e74c3c',
-      style: 'solid',
-      label: 'зависит от',
-      description: 'Зависимость между понятиями'
-    },
-    {
-      id: 'example_of',
-      name: 'пример',
-      color: '#2ecc71',
-      style: 'dashed',
-      label: 'пример',
-      description: 'Пример для понятия'
-    },
-    {
-      id: 'related_to',
-      name: 'связано с',
-      color: '#3498db',
-      style: 'dotted',
-      label: 'связано с',
-      description: 'Общая связь'
-    },
-    {
-      id: 'contradicts',
-      name: 'противоречит',
-      color: '#e74c3c',
-      style: 'dashed',
-      label: 'противоречит',
-      description: 'Противоречие'
-    }
-  ];
-
-  const templates = isNodeCategory ? nodeTemplates : edgeTemplates;
-
   const loadTypes = useCallback(async () => {
     try {
       const data = await customTypesService.getTypes(mapId, category);
-      setSystemTypes(data.system);
-      setCustomTypes(data.custom);
+      setCustomTypes(data.custom || []);
     } catch (error) {
       console.error('Ошибка загрузки типов:', error);
       setError('Не удалось загрузить типы');
@@ -226,21 +103,11 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
     }
   };
 
-  const applyTemplate = (template) => {
-    setNewType({
-      name: template.name,
-      color: template.color,
-      shape: template.shape || 'rect',
-      style: template.style || 'solid',
-      label: template.label || '',
-      icon: template.icon || '',
-      size: 'medium',
-      customFields: template.customFields || []
-    });
-  };
-
   const handleDeleteType = async (typeId) => {
-    if (!window.confirm('Удалить этот тип? Он исчезнет из всех узлов, где используется.')) return;
+    const confirmMessage = isNodeCategory
+      ? 'Удалить этот тип? Он исчезнет из всех узлов, где используется.'
+      : 'Удалить этот тип? Он исчезнет из всех связей, где используется.';
+    if (!window.confirm(confirmMessage)) return;
 
     try {
       await customTypesService.deleteType(mapId, category, typeId);
@@ -259,6 +126,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
       shape: type.shape || 'rect',
       style: type.style || 'solid',
       label: type.label || '',
+      isBidirectional: Boolean(type.isBidirectional),
       icon: type.icon || '',
       size: type.size || 'medium',
       customFields: type.customFields || []
@@ -273,6 +141,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
       shape: 'rect',
       style: 'solid',
       label: '',
+      isBidirectional: false,
       icon: '',
       size: 'medium',
       customFields: []
@@ -394,35 +263,18 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
     }
   };
 
+  const getEdgeTypeIcon = (type) => {
+    if (type?.isBidirectional) return 'sync_alt';
+    if (type?.style === 'dashed') return 'trending_flat';
+    if (type?.style === 'dotted') return 'keyboard_double_arrow_right';
+    return 'arrow_right_alt';
+  };
+
   const renderForm = () => (
     <div className="create-type-form">
       <h5>{editingType ? 'Редактировать тип' : 'Создать новый тип'}</h5>
       
       {error && <div className="error-message">{error}</div>}
-      
-      {/* Шаблоны */}
-      {!editingType && templates.length > 0 && (
-        <div className="templates-section">
-          <label>Быстрый старт:</label>
-          <div className="templates-grid">
-            {templates.map(template => (
-              <button
-                key={template.id}
-                className="template-card"
-                onClick={() => applyTemplate(template)}
-              >
-                <span className="material-icons">
-                  {isNodeCategory ? 'category' : 'timeline'}
-                </span>
-                <div>
-                  <strong>{template.name}</strong>
-                  <small>{template.description}</small>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       
       <div className="form-group">
         <label>Название типа *</label>
@@ -465,18 +317,6 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
                 <option value="rounded">Скругленный</option>
                 <option value="oval">Овал</option>
                 <option value="diamond">Ромб</option>
-              </select>
-            </div>
-            
-            <div className="form-group">
-              <label>Размер</label>
-              <select
-                value={newType.size}
-                onChange={(e) => setNewType({...newType, size: e.target.value})}
-              >
-                <option value="small">Маленький</option>
-                <option value="medium">Средний</option>
-                <option value="large">Большой</option>
               </select>
             </div>
           </div>
@@ -586,6 +426,20 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
                 <option value="dotted">Точечная · · · ·</option>
               </select>
             </div>
+
+            <div className="form-group">
+              <label>Направление</label>
+              <select
+                value={newType.isBidirectional ? 'bidirectional' : 'unidirectional'}
+                onChange={(e) => setNewType({
+                  ...newType,
+                  isBidirectional: e.target.value === 'bidirectional'
+                })}
+              >
+                <option value="unidirectional">Однонаправленная</option>
+                <option value="bidirectional">Двунаправленная</option>
+              </select>
+            </div>
           </div>
           
           <div className="form-group">
@@ -607,7 +461,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
           <div 
             className="node-preview"
             style={{ 
-              ...getShapeStyle(newType.shape, newType.size),
+              ...getShapeStyle(newType.shape),
               backgroundColor: newType.color,
               color: getContrastColor(newType.color),
               gap: '8px',
@@ -626,6 +480,9 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
                 marginBottom: '8px'
               }}
             />
+            <span style={{ color: newType.color, fontSize: '14px', marginBottom: '4px' }}>
+              {newType.isBidirectional ? '↔' : '→'}
+            </span>
             {newType.label && (
               <span style={{ color: newType.color, fontSize: '12px' }}>
                 {newType.label}
@@ -767,51 +624,18 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
         </div>
 
         <div className="type-manager-content">
-          {/* Системные типы */}
-          <div className="types-section">
-            <h4>Системные типы</h4>
-            <div className="types-grid">
-              {systemTypes.map(type => (
-                <div key={type.id} className="type-card system">
-                  {isNodeCategory ? (
-                    <>
-                      <div 
-                        className="color-preview"
-                        style={{ backgroundColor: type.color, ...getShapeStyle(type.shape) }}
-                      />
-                      <div className="type-info">
-                        <span className="type-name">{type.name}</span>
-                        {type.icon && (
-                          <span className="material-icons type-icon">{type.icon}</span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div 
-                        className="line-preview"
-                        style={{
-                          borderBottom: `3px ${type.style} ${type.color || '#666'}`,
-                          width: '50px'
-                        }}
-                      />
-                      <div className="type-info">
-                        <span className="type-name">{type.name}</span>
-                        {type.label && <span className="type-label">{type.label}</span>}
-                      </div>
-                    </>
-                  )}
-                  <span className="system-badge">системный</span>
-                </div>
-              ))}
+          {!isNodeCategory && (
+            <div className="info-message">
+              <span className="material-icons">auto_awesome</span>
+              <span>Создавайте свои связи.</span>
             </div>
-          </div>
+          )}
 
           {/* Пользовательские типы */}
           {isOwner && (
             <div className="types-section">
               <div className="section-header">
-                <h4>✨ Мои типы</h4>
+                <h4>Мои типы</h4>
                 <button 
                   className="add-type-btn"
                   onClick={() => setShowCreateForm(true)}
@@ -826,7 +650,7 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
               <div className="types-grid">
                 {customTypes.length === 0 && !showCreateForm ? (
                   <div className="empty-types">
-                    <span className="material-icons">category</span>
+                    <span className="material-icons">{isNodeCategory ? 'category' : 'timeline'}</span>
                     <p>У вас пока нет своих типов</p>
                     <button 
                       className="create-first-btn"
@@ -858,16 +682,15 @@ function TypeManager({ mapId, isOwner, category, onClose, onTypesChange }) {
                         </>
                       ) : (
                         <>
-                          <div 
-                            className="line-preview"
-                            style={{
-                              borderBottom: `3px ${type.style} ${type.color}`,
-                              width: '50px'
-                            }}
-                          />
+                          <div className="edge-type-badge" style={{ backgroundColor: type.color || '#666666' }}>
+                            <span className="material-icons">{getEdgeTypeIcon(type)}</span>
+                          </div>
                           <div className="type-info">
                             <span className="type-name">{type.name}</span>
                             {type.label && <span className="type-label">{type.label}</span>}
+                            <span className="type-label">
+                              {type.isBidirectional ? 'двунаправленная' : 'однонаправленная'}
+                            </span>
                           </div>
                         </>
                       )}

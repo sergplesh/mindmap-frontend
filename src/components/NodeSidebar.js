@@ -305,6 +305,11 @@ function NodeSidebar({
     }));
   };
 
+  const handleTitleChange = (nextTitle) => {
+    setTitle(nextTitle);
+    setNode((prev) => (prev ? { ...prev, title: nextTitle } : prev));
+  };
+
   const renderCustomFieldsForm = () => {
     if (!selectedTypeDetails?.customFields || selectedTypeDetails.customFields.length === 0) {
       return <p className="empty-message">Дополнительные поля отсутствуют</p>;
@@ -667,7 +672,7 @@ function NodeSidebar({
                   ref={titleInputRef}
                   type="text"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => handleTitleChange(e.target.value)}
                   placeholder="Введите название узла"
                 />
               </div>
@@ -679,14 +684,14 @@ function NodeSidebar({
                   onChange={(e) => setTypeSelection(e.target.value)}
                 >
                   <option value="">Без типа</option>
-                  <optgroup label="Системные типы">
+                  {/* <optgroup label="Системные типы">
                     {systemNodeTypes.map((type) => (
                       <option key={`sys-${type.id}`} value={`sys-${type.id}`}>
                         {type.name}
                       </option>
                     ))}
-                  </optgroup>
-                  <optgroup label="Мои типы">
+                  </optgroup> */}
+                  <optgroup>
                     {customNodeTypes.map((type) => (
                       <option key={`custom-${type.id}`} value={`custom-${type.id}`}>
                         {type.name}

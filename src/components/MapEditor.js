@@ -221,6 +221,7 @@ const convertToMindElixirFormat = (nodes, edges, customNodeTypes, systemNodeType
         label: edge.label || edge.type?.label || edge.typeLabel || '',
         typeId: edge.typeId ?? null,
         customTypeId: edge.customTypeId ?? null,
+        bidirectional: Boolean(edge.type?.isBidirectional ?? edge.typeIsBidirectional ?? edge.isBidirectional),
         style
       };
     });
@@ -387,6 +388,19 @@ const debounce = (func, delay) => {
   };
 };
 
+const createConnectionDraftState = (overrides = {}) => ({
+  active: false,
+  sourceMindId: null,
+  sourceTitle: '',
+  selectedCustomTypeId: null,
+  selectedTypeName: 'Связь по умолчанию',
+  selectedLabel: '',
+  selectedStyle: 'solid',
+  selectedColor: '#666666',
+  isBidirectional: false,
+  ...overrides
+});
+
 const createMindElixirNode = (topic) => ({
   id: `tmp_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
   topic,
@@ -436,7 +450,7 @@ function MapEditor({ map, userId, onClose }) {
   const userRoleRef = useRef(map.ownerId === userId ? 'owner' : (map.userRole || 'observer'));
   const isOwnerRef = useRef(map.ownerId === userId || map.userRole === 'owner');
   const inlineEditCleanupRef = useRef(null);
-  const connectionDraftRef = useRef({ active: false, sourceMindId: null, sourceTitle: '' });
+  const connectionDraftRef = useRef(createConnectionDraftState());
   const setupEventListenersRef = useRef(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [userRole, setUserRole] = useState(map.ownerId === userId ? 'owner' : (map.userRole || 'observer'));
@@ -447,17 +461,19 @@ function MapEditor({ map, userId, onClose }) {
   const [selectedNodeForQuiz, setSelectedNodeForQuiz] = useState(null);
   const [showLockedNodePrompt, setShowLockedNodePrompt] = useState(false);
   const [lockedNodePromptData, setLockedNodePromptData] = useState(null);
-  const [connectionDraft, setConnectionDraft] = useState({ active: false, sourceMindId: null, sourceTitle: '' });
+  const [connectionDraft, setConnectionDraft] = useState(createConnectionDraftState());
   const [showNodeInfoModal, setShowNodeInfoModal] = useState(false);
   const [selectedNodeInfo, setSelectedNodeInfo] = useState(null);
   const [unlockedNodes, setUnlockedNodes] = useState(new Set());
   const [totalNodesCount, setTotalNodesCount] = useState(0);
   const [systemNodeTypes, setSystemNodeTypes] = useState([]);
   const [customNodeTypes, setCustomNodeTypes] = useState([]);
+  const [customEdgeTypes, setCustomEdgeTypes] = useState([]);
   const [allNodes, setAllNodes] = useState([]);
   const [allEdges, setAllEdges] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [mapLoadError, setMapLoadError] = useState('');
   const [areNodeTypesLoaded, setAreNodeTypesLoaded] = useState(false);
   
   const isOwner = map.ownerId === userId || userRole === 'owner';
@@ -482,9 +498,17 @@ function MapEditor({ map, userId, onClose }) {
     }
   }, []);
 
+  const getInlineEditInputBox = useCallback(() => {
+    const scopedInput = containerRef.current?.querySelector('#input-box');
+    if (scopedInput) {
+      return scopedInput;
+    }
+
+    return document.querySelector('#input-box');
+  }, []);
+
   const commitPendingInlineEdit = useCallback(async () => {
-    const container = containerRef.current;
-    const inputBox = container?.querySelector('#input-box');
+    const inputBox = getInlineEditInputBox();
 
     if (!inputBox || typeof inputBox.blur !== 'function') {
       return;
@@ -492,7 +516,7 @@ function MapEditor({ map, userId, onClose }) {
 
     inputBox.blur();
     await new Promise((resolve) => setTimeout(resolve, 0));
-  }, []);
+  }, [getInlineEditInputBox]);
 
   const updateConnectionDraft = useCallback((nextDraft) => {
     connectionDraftRef.current = nextDraft;
@@ -500,7 +524,7 @@ function MapEditor({ map, userId, onClose }) {
   }, []);
 
   const resetConnectionDraft = useCallback(() => {
-    updateConnectionDraft({ active: false, sourceMindId: null, sourceTitle: '' });
+    updateConnectionDraft(createConnectionDraftState());
   }, [updateConnectionDraft]);
 
   const createSidebarNodeFromMindNode = useCallback((mindNode) => {
@@ -575,9 +599,20 @@ function MapEditor({ map, userId, onClose }) {
     }
   }, [customTypesService, map.id]);
 
+  const loadEdgeTypes = useCallback(async () => {
+    try {
+      const edgeTypesData = await customTypesService.getTypes(map.id, 'edge');
+      setCustomEdgeTypes(edgeTypesData?.custom || []);
+    } catch (error) {
+      console.error('Ошибка загрузки типов связей:', error);
+      setCustomEdgeTypes([]);
+    }
+  }, [customTypesService, map.id]);
+
   useEffect(() => {
     loadNodeTypes();
-  }, [loadNodeTypes]);
+    loadEdgeTypes();
+  }, [loadEdgeTypes, loadNodeTypes]);
 
   const applyCustomStyles = useCallback(() => {
     if (!mindMapRef.current) return;
@@ -771,75 +806,7 @@ function MapEditor({ map, userId, onClose }) {
   const loadMap = useCallback(async () => {
     isInitializingRef.current = true;
     setIsLoading(true);
-
-    const renderDemoMap = () => {
-      if (!containerRef.current) return;
-
-      console.log('Создаем демо-карту');
-
-      const demoData = {
-        nodeData: {
-          id: 'root',
-          topic: map.title || 'Карта знаний',
-          expanded: true,
-          children: [
-            {
-              id: 'child1',
-              topic: 'Тема 1',
-              expanded: true,
-              children: [
-                { id: 'child1_1', topic: 'Подтема 1.1', expanded: true },
-                { id: 'child1_2', topic: 'Подтема 1.2', expanded: true }
-              ]
-            },
-            {
-              id: 'child2',
-              topic: 'Тема 2',
-              expanded: true,
-              children: [
-                { id: 'child2_1', topic: 'Подтема 2.1', expanded: true }
-              ]
-            },
-            {
-              id: 'child3',
-              topic: 'Тема 3',
-              expanded: true
-            }
-          ]
-        }
-      };
-
-      if (mindMapRef.current) {
-        cleanupMindMapListeners();
-        mindMapRef.current.destroy();
-      }
-
-      isInitializingRef.current = true;
-      mindMapRef.current = new MindElixir({
-        el: containerRef.current,
-        direction: MindElixir.SIDE,
-        draggable: isOwner,
-        contextMenu: isOwner,
-        toolBar: false,
-        nodeMenu: false,
-        keypress: isOwner,
-        locale: 'ru'
-      });
-
-      mindMapRef.current.init(demoData);
-      patchMindMapMethods(mindMapRef.current);
-      rebalanceRootBranches(mindMapRef.current);
-      console.log('Демо-карта создана');
-      setTimeout(() => {
-        isInitializingRef.current = false;
-      }, 0);
-
-      setTimeout(() => {
-        applyCustomStyles();
-      }, 500);
-
-      setupEventListenersRef.current?.();
-    };
+    setMapLoadError('');
 
     try {
       console.log('Загрузка карты...');
@@ -915,18 +882,18 @@ function MapEditor({ map, userId, onClose }) {
         setupEventListenersRef.current?.();
       } else {
         console.error('Нет данных для отображения');
-        renderDemoMap();
+        setMapLoadError('Не удалось загрузить данные карты.');
       }
     } catch (error) {
       console.error('Ошибка загрузки карты:', error);
-      renderDemoMap();
+      setMapLoadError(error?.response?.data?.message || 'Ошибка загрузки карты. Проверьте подключение к серверу и обновите страницу.');
     } finally {
       setIsLoading(false);
       setTimeout(() => {
         isInitializingRef.current = false;
       }, 0);
     }
-  }, [map.id, map.title, map.ownerId, userId, mapsService, customNodeTypes, systemNodeTypes, isOwner, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches, resetConnectionDraft]);
+  }, [map.id, map.ownerId, userId, mapsService, customNodeTypes, systemNodeTypes, applyCustomStyles, cleanupMindMapListeners, patchMindMapMethods, rebalanceRootBranches, resetConnectionDraft]);
 
   const handleTypesChange = useCallback(async (category) => {
     if (category === 'node') {
@@ -934,8 +901,9 @@ function MapEditor({ map, userId, onClose }) {
       return;
     }
 
+    await loadEdgeTypes();
     await loadMap();
-  }, [loadMap, loadNodeTypes]);
+  }, [loadEdgeTypes, loadMap, loadNodeTypes]);
 
   const setupEventListeners = useCallback(() => {
     if (!mindMapRef.current || !containerRef.current) return;
@@ -989,7 +957,7 @@ function MapEditor({ map, userId, onClose }) {
       cleanupInlineEditSync();
 
       requestAnimationFrame(() => {
-        const inputBox = container.querySelector('#input-box');
+        const inputBox = getInlineEditInputBox();
         if (!inputBox) return;
 
         const syncTitle = () => {
@@ -997,11 +965,23 @@ function MapEditor({ map, userId, onClose }) {
           syncSelectedNodeTitle(sidebarNode?.id ?? mindNode.id, nextTitle);
         };
 
+        const mutationObserver = new MutationObserver(syncTitle);
+        mutationObserver.observe(inputBox, {
+          childList: true,
+          subtree: true,
+          characterData: true
+        });
+
         inputBox.addEventListener('input', syncTitle);
+        inputBox.addEventListener('keyup', syncTitle);
+        inputBox.addEventListener('blur', syncTitle);
         syncTitle();
 
         inlineEditCleanupRef.current = () => {
+          mutationObserver.disconnect();
           inputBox.removeEventListener('input', syncTitle);
+          inputBox.removeEventListener('keyup', syncTitle);
+          inputBox.removeEventListener('blur', syncTitle);
         };
       });
     };
@@ -1098,11 +1078,12 @@ function MapEditor({ map, userId, onClose }) {
           e.preventDefault();
           e.stopPropagation();
 
-          const { sourceMindId } = connectionDraftRef.current;
+          const draft = connectionDraftRef.current;
+          const { sourceMindId } = draft;
 
           if (!sourceMindId) {
             updateConnectionDraft({
-              active: true,
+              ...draft,
               sourceMindId: String(foundNode.id),
               sourceTitle: foundNode.topic || 'Узел'
             });
@@ -1112,7 +1093,7 @@ function MapEditor({ map, userId, onClose }) {
 
           if (String(sourceMindId) === String(foundNode.id)) {
             updateConnectionDraft({
-              active: true,
+              ...draft,
               sourceMindId: null,
               sourceTitle: ''
             });
@@ -1140,10 +1121,19 @@ function MapEditor({ map, userId, onClose }) {
             return;
           }
 
+          const isBidirectional = Boolean(draft.isBidirectional);
           const edgeExists = allEdgesRef.current.some((edge) => (
-            !edge.isHierarchy &&
-            String(edge.sourceNodeId) === String(sourceResolvedId) &&
-            String(edge.targetNodeId) === String(targetResolvedId)
+            !edge.isHierarchy && (
+              (
+                String(edge.sourceNodeId) === String(sourceResolvedId) &&
+                String(edge.targetNodeId) === String(targetResolvedId)
+              ) ||
+              (
+                isBidirectional &&
+                String(edge.sourceNodeId) === String(targetResolvedId) &&
+                String(edge.targetNodeId) === String(sourceResolvedId)
+              )
+            )
           ));
 
           if (edgeExists) {
@@ -1151,15 +1141,26 @@ function MapEditor({ map, userId, onClose }) {
             return;
           }
 
+          const edgeColor = draft.selectedColor || '#666666';
+          const edgeStyle = draft.selectedStyle || 'solid';
+          const style = {
+            stroke: edgeColor,
+            strokeWidth: '2',
+            labelColor: edgeColor
+          };
+          if (edgeStyle === 'dashed') {
+            style.strokeDasharray = '8 4';
+          } else if (edgeStyle === 'dotted') {
+            style.strokeDasharray = '2 6';
+            style.strokeLinecap = 'round';
+          }
+
           mind.createArrow(sourceElement, targetElement, {
-            label: '',
+            label: draft.selectedLabel || '',
             typeId: null,
-            customTypeId: null,
-            style: {
-              stroke: '#666666',
-              strokeWidth: '2',
-              labelColor: '#666666'
-            }
+            customTypeId: draft.selectedCustomTypeId ?? null,
+            bidirectional: isBidirectional,
+            style
           });
 
           resetConnectionDraft();
@@ -1307,7 +1308,7 @@ function MapEditor({ map, userId, onClose }) {
     mind.clickHandlerOptions = listenerOptions;
     
     console.log('Обработчики событий настроены');
-  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, map.id, nodesService, resetConnectionDraft, syncSelectedNodeTitle, updateConnectionDraft]);
+  }, [applyCustomStyles, cleanupInlineEditSync, createSidebarNodeFromMindNode, getInlineEditInputBox, map.id, nodesService, resetConnectionDraft, syncSelectedNodeTitle, updateConnectionDraft]);
 
   useEffect(() => {
     setupEventListenersRef.current = setupEventListeners;
@@ -1766,6 +1767,33 @@ function MapEditor({ map, userId, onClose }) {
     }
   }, [map.id, nodesService, waitForSaveQueue]);
 
+  const startConnectionMode = useCallback((edgeType = null) => {
+    const baseDraft = createConnectionDraftState({
+      active: true
+    });
+
+    if (!edgeType) {
+      setSelectedNode(null);
+      updateConnectionDraft(baseDraft);
+      return;
+    }
+
+    const style = edgeType.style || 'solid';
+    const color = edgeType.color || '#666666';
+    const label = edgeType.label || '';
+
+    setSelectedNode(null);
+    updateConnectionDraft({
+      ...baseDraft,
+      selectedCustomTypeId: edgeType.id,
+      selectedTypeName: edgeType.name || 'Пользовательская связь',
+      selectedLabel: label,
+      selectedStyle: style,
+      selectedColor: color,
+      isBidirectional: Boolean(edgeType.isBidirectional)
+    });
+  }, [updateConnectionDraft]);
+
   // Экспорт в PNG
   const handleToggleConnectionMode = useCallback(() => {
     if (connectionDraftRef.current.active) {
@@ -1773,9 +1801,8 @@ function MapEditor({ map, userId, onClose }) {
       return;
     }
 
-    setSelectedNode(null);
-    updateConnectionDraft({ active: true, sourceMindId: null, sourceTitle: '' });
-  }, [resetConnectionDraft, updateConnectionDraft]);
+    startConnectionMode(null);
+  }, [resetConnectionDraft, startConnectionMode]);
 
   const handleExportPNG = useCallback(async () => {
     if (!mindMapRef.current) return;
@@ -1836,13 +1863,24 @@ function MapEditor({ map, userId, onClose }) {
           <p>Загрузка карты...</p>
         </div>
       )}
+      {!isLoading && mapLoadError && (
+        <div className="map-editor-loading map-editor-loading-overlay">
+          <div className="load-error-card">
+            <span className="material-icons">error_outline</span>
+            <p>{mapLoadError}</p>
+            <button className="retry-load-btn" onClick={loadMap}>
+              Повторить загрузку
+            </button>
+          </div>
+        </div>
+      )}
       {isOwner && (
         <div className="left-toolbar">
           <div className="toolbar-section">
             <button
               onClick={handleAddTopic}
               className="toolbar-btn"
-              data-tooltip="Добавить тему (того же уровня)"
+              data-tooltip="Добавить тему [Enter]"
             >
               <span className="material-icons">note_add</span>
             </button>
@@ -1853,13 +1891,49 @@ function MapEditor({ map, userId, onClose }) {
             >
               <span className="material-icons">playlist_add</span>
             </button>
-            <button
-              onClick={handleToggleConnectionMode}
-              className={`toolbar-btn ${connectionDraft.active ? 'active' : ''}`}
-              data-tooltip={connectionDraft.active ? 'Режим создания связи' : 'Создать связь между узлами'}
-            >
-              <span className="material-icons">device_hub</span>
-            </button>
+            <div className="connection-type-dropdown">
+              <button
+                onClick={handleToggleConnectionMode}
+                className={`toolbar-btn ${connectionDraft.active ? 'active' : ''}`}
+                data-tooltip={connectionDraft.active ? `Режим связи: ${connectionDraft.selectedTypeName}` : 'Создать связь между узлами'}
+              >
+                <span className="material-icons">device_hub</span>
+              </button>
+              <div className="connection-type-menu">
+                <button
+                  className={`connection-type-item ${connectionDraft.selectedCustomTypeId === null ? 'selected' : ''}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startConnectionMode(null);
+                  }}
+                >
+                  <span className="material-icons">device_hub</span>
+                  <span>Связь по умолчанию</span>
+                </button>
+                {customEdgeTypes.map((type) => (
+                  <button
+                    key={type.id}
+                    className={`connection-type-item ${connectionDraft.selectedCustomTypeId === type.id ? 'selected' : ''}`}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      startConnectionMode(type);
+                    }}
+                  >
+                    <span className="material-icons">
+                      {type.isBidirectional ? 'sync_alt' : 'arrow_right_alt'}
+                    </span>
+                    <span>{type.name}</span>
+                  </button>
+                ))}
+                {customEdgeTypes.length === 0 && (
+                  <div className="connection-type-empty">
+                    Создайте свои типы связей
+                  </div>
+                )}
+              </div>
+            </div>
             
             <button
               onClick={() => {

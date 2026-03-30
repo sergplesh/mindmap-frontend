@@ -463,7 +463,7 @@ const BulkImportModal = ({ isOpen, onClose, onImport, mapId, isOwner }) => {
               />
               <button className="template-btn" onClick={downloadTemplate}>
                 <span className="material-icons">file_download</span>
-                Скачать шаблон
+                Скачать
               </button>
             </div>
 

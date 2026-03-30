@@ -34,10 +34,52 @@ const AttemptResults = ({ attempt }) => {
           </div>
           <div className="attempt-history-meta">
             <span>Ваш ответ: {(detail.selectedOptionTexts || []).join(', ') || '—'}</span>
-            <span>Правильный ответ: {(detail.correctOptionTexts || []).join(', ') || '—'}</span>
+            {detail.isCorrect && (
+              <span>Правильный ответ: {(detail.correctOptionTexts || []).join(', ') || '—'}</span>
+            )}
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+const QuizResultModal = ({ isOpen, result, onClose, onPrimaryAction }) => {
+  if (!isOpen || !result) return null;
+
+  return (
+    <div
+      className="quiz-result-modal-overlay"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div className="quiz-result-modal" onClick={(e) => e.stopPropagation()}>
+        <div className={`quiz-result-modal-header ${result.success ? 'success' : 'error'}`}>
+          <span className="material-icons">
+            {result.success ? 'check_circle' : 'error'}
+          </span>
+          <h4>{result.success ? 'Тест пройден' : 'Тест не пройден'}</h4>
+        </div>
+
+        <div className="quiz-result-modal-content">
+          <p className="quiz-result-modal-message">{result.message}</p>
+          <AttemptResults attempt={{ results: result.details }} />
+        </div>
+
+        <div className="quiz-result-modal-actions">
+          {result.success ? (
+            <button className="submit-btn" onClick={onPrimaryAction}>
+              Продолжить
+            </button>
+          ) : (
+            <button className="next-btn" onClick={onClose}>
+              Понятно
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
@@ -50,13 +92,17 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
+  const [isResultModalOpen, setIsResultModalOpen] = useState(false);
   const [latestAttempt, setLatestAttempt] = useState(null);
   const [loadingLatestAttempt, setLoadingLatestAttempt] = useState(false);
-  const [attempts, setAttempts] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [latestAttemptPage, setLatestAttemptPage] = useState(1);
+  const successfulLatestAttempt = latestAttempt?.isPassed ? latestAttempt : null;
   const totalPages = Math.max(1, Math.ceil(questions.length / QUESTIONS_PAGE_SIZE));
-  const latestAttemptEntries = useMemo(() => latestAttempt?.results ?? [], [latestAttempt]);
+  const latestAttemptEntries = useMemo(
+    () => successfulLatestAttempt?.results ?? [],
+    [successfulLatestAttempt]
+  );
   const latestAttemptTotalPages = Math.max(1, Math.ceil(latestAttemptEntries.length / ATTEMPTS_PAGE_SIZE));
   const visibleQuestions = useMemo(() => {
     const startIndex = (currentPage - 1) * QUESTIONS_PAGE_SIZE;
@@ -80,6 +126,19 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
   const goPrevAttemptPage = useCallback(() => {
     setLatestAttemptPage((prevPage) => Math.max(prevPage - 1, 1));
   }, []);
+  const closeResultModal = useCallback(() => {
+    setIsResultModalOpen(false);
+    onClose();
+  }, [onClose]);
+  const handleResultPrimaryAction = useCallback(() => {
+    if (result?.success) {
+      onSuccess(node.id);
+      onClose();
+      return;
+    }
+
+    setIsResultModalOpen(false);
+  }, [node?.id, onClose, onSuccess, result?.success]);
 
   useEffect(() => {
     setCurrentPage((prevPage) => Math.min(prevPage, totalPages));
@@ -101,6 +160,7 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
       setLoadingLatestAttempt(true);
       setAnswers({});
       setResult(null);
+      setIsResultModalOpen(false);
       setError('');
       resetQuestionsPagination();
       resetAttemptPagination();
@@ -190,17 +250,9 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
       };
 
       setResult(responseResult);
+      setIsResultModalOpen(true);
       setLatestAttempt(response.latestAttempt || null);
       resetAttemptPagination();
-
-      if (response.isPassed) {
-        setTimeout(() => {
-          onSuccess(node.id);
-          onClose();
-        }, 2000);
-      } else {
-        setAttempts(prev => prev + 1);
-      }
     } catch (err) {
       setError(err.response?.data?.message || 'Ошибка проверки ответов');
     } finally {
@@ -228,6 +280,13 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
 
   return (
     <div className="quiz-modal-overlay" onClick={onClose}>
+      <QuizResultModal
+        isOpen={isResultModalOpen}
+        result={result}
+        onClose={closeResultModal}
+        onPrimaryAction={handleResultPrimaryAction}
+      />
+      {!isResultModalOpen && (
       <div className="quiz-modal" onClick={e => e.stopPropagation()}>
         <div className="quiz-modal-header">
           <h3>
@@ -255,23 +314,22 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
               <div className="quiz-progress">
                 <span>Вопросов: {questions.length}</span>
                 <span>Страница {currentPage} из {totalPages}</span>
-                {attempts > 0 && <span className="attempts">Попыток: {attempts}</span>}
               </div>
 
               {loadingLatestAttempt ? (
                 <div className="attempt-panel loading">Загрузка последней попытки...</div>
-              ) : latestAttempt ? (
+              ) : successfulLatestAttempt ? (
                 <div className="attempt-panel">
                   <div className="attempt-panel-header">
                     <div>
-                      <strong>Последняя попытка</strong>
-                      <div className="attempt-panel-date">{formatAttemptDate(latestAttempt.completedAt)}</div>
+                      <strong>Последняя успешная попытка</strong>
+                      <div className="attempt-panel-date">{formatAttemptDate(successfulLatestAttempt.completedAt)}</div>
                     </div>
-                    <span className={`attempt-panel-status ${latestAttempt.isPassed ? 'passed' : 'failed'}`}>
-                      {latestAttempt.isPassed ? 'Пройдена' : 'Не пройдена'}
+                    <span className="attempt-panel-status passed">
+                      Пройдена
                     </span>
                   </div>
-                  <AttemptResults attempt={{ ...latestAttempt, results: latestAttemptResults }} />
+                  <AttemptResults attempt={{ ...successfulLatestAttempt, results: latestAttemptResults }} />
                   {latestAttemptTotalPages > 1 && (
                     <div className="attempt-pagination">
                       <button
@@ -352,17 +410,6 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
                 </div>
               )}
 
-              {result && (
-                <div className={`quiz-result ${result.success ? 'success' : 'error'}`}>
-                  <span className="material-icons">
-                    {result.success ? 'check_circle' : 'error'}
-                  </span>
-                  <div>
-                    <p>{result.message}</p>
-                    <AttemptResults attempt={{ results: result.details }} />
-                  </div>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -402,6 +449,7 @@ const QuizModal = ({ isOpen, onClose, node, onSuccess }) => {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 };
